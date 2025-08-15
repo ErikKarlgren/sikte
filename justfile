@@ -6,10 +6,10 @@ build:
     cargo build
 
 check:
-    cargo check
+    cargo check && cargo clippy
 
 run: build
-    RUST_LOG=info cargo run --config 'target."cfg(all())".runner="sudo -E"'
+    RUST_BACKTRACE=1 RUST_LOG=info cargo run --config 'target."cfg(all())".runner="sudo -E"'
 
 # Aliases
 b: build
