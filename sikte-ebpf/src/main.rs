@@ -1,38 +1,37 @@
 #![no_std]
 #![no_main]
 
+mod perf_events;
+mod trace_points;
+
 use aya_ebpf::{
-    EbpfContext, helpers::bpf_get_smp_processor_id, macros::perf_event, programs::PerfEventContext,
+    macros::{perf_event, tracepoint},
+    programs::{PerfEventContext, TracePointContext},
 };
-use aya_log_ebpf::info;
+use perf_events::try_perf_events;
+use trace_points::try_tracepoints;
 
 #[perf_event]
-pub fn sikte(ctx: PerfEventContext) -> u32 {
-    match try_sikte(ctx) {
+pub fn sikte_perf_events(ctx: PerfEventContext) -> u32 {
+    match try_perf_events(ctx) {
         Ok(ret) => ret,
         Err(ret) => ret,
     }
 }
 
-fn try_sikte(ctx: PerfEventContext) -> Result<u32, u32> {
-    let cpu = unsafe { bpf_get_smp_processor_id() };
-    match ctx.pid() {
-        0 => info!(
-            &ctx,
-            "perf_event 'perftest' triggered on CPU {}, running a kernel task", cpu
-        ),
-        pid => info!(
-            &ctx,
-            "perf_event 'perftest' triggered on CPU {}, running PID {}", cpu, pid
-        ),
+#[tracepoint]
+pub fn sikte_trace_points(ctx: TracePointContext) -> u32 {
+    match try_tracepoints(ctx) {
+        Ok(ret) => ret,
+        Err(ret) => ret,
     }
-
-    Ok(0)
 }
 
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
+    use aya_ebpf::macros::tracepoint;
+
     loop {}
 }
 
