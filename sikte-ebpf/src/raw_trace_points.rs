@@ -1,58 +1,106 @@
 use aya_ebpf::{
-    helpers::{bpf_get_current_pid_tgid, r#gen::bpf_ktime_get_ns},
-    macros::{raw_tracepoint, tracepoint},
-    programs::{RawTracePointContext, TracePointContext},
+    EbpfContext,
+    cty::{c_int, c_long, c_uchar, c_ulong, c_ushort},
+    helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns, bpf_probe_read_kernel},
+    macros::raw_tracepoint,
+    programs::RawTracePointContext,
 };
-use aya_log_ebpf::info;
-use sikte_common::{SyscallData, SyscallName, SyscallState};
+use aya_log_ebpf::{error, info};
+use sikte_common::SyscallState;
 
-#[raw_tracepoint]
+// TODO: check if you really needed to manually copy from `/sys/kernel/debug/tracing/events/raw_syscalls/sys_enter/format`
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct SysEnter {
+    common_type: c_ushort,
+    common_flags: c_uchar,
+    common_preempt_count: c_uchar,
+    common_pid: c_int,
+    id: c_long,
+    args: [c_ulong; 6],
+}
+
+#[raw_tracepoint(tracepoint = "sys_enter")]
 pub fn sikte_raw_trace_point_at_enter(ctx: RawTracePointContext) -> u32 {
-    match try_raw_trace_points(ctx, SyscallState::AtEnter) {
+    match try_sys_enter(ctx) {
         Ok(ret) => ret,
         Err(ret) => ret,
     }
 }
 
-#[raw_tracepoint]
-pub fn sikte_raw_trace_point_at_exit(ctx: RawTracePointContext) -> u32 {
-    match try_raw_trace_points(ctx, SyscallState::AtExit) {
-        Ok(ret) => ret,
-        Err(ret) => ret,
-    }
-}
+pub fn try_sys_enter(ctx: RawTracePointContext) -> Result<u32, u32> {
+    let timestamp = unsafe { bpf_ktime_get_ns() };
 
-pub fn try_raw_trace_points(ctx: RawTracePointContext, state: SyscallState) -> Result<u32, u32> {
     let pid_tgid = bpf_get_current_pid_tgid();
     let tgid = (pid_tgid >> 32) as u32;
     let pid = (pid_tgid & (u32::MAX as u64)) as u32;
-    let timestamp = unsafe { bpf_ktime_get_ns() };
 
-    let mut name: SyscallName = core::array::from_fn(|_| 0);
-    name[0] = b'l';
-    name[1] = b'm';
-    name[2] = b'a';
-    name[3] = b'o';
+    let args = ctx.as_ptr() as *const SysEnter;
+    let syscall_nr: c_long = unsafe {
+        const SYSCALL_ID_OFFSET: usize = core::mem::offset_of!(SysEnter, id);
 
-    let data = SyscallData {
-        timestamp,
-        tgid,
-        pid,
-        state,
-        name,
+        match bpf_probe_read_kernel(args.byte_add(SYSCALL_ID_OFFSET) as *const c_long) {
+            Ok(syscall) => syscall,
+            Err(err) => {
+                error!(&ctx, "error sys_enter: {}", err);
+                return Err(err as u32);
+            }
+        }
     };
 
     info!(
         &ctx,
-        "[{}] ({}, {}) syscall '{}' at {}",
-        timestamp,
-        tgid,
-        pid,
-        unsafe { core::str::from_utf8_unchecked(&name) },
-        match state {
-            SyscallState::AtEnter => "enter",
-            SyscallState::AtExit => "exit",
+        // "[ns: {}, tgid: {}, pid: {}] enter syscall {} ", timestamp, tgid, pid, syscall_nr,
+        "enter syscall {} ",
+        syscall_nr,
+    );
+    Ok(0)
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct SysExit {
+    common_type: c_ushort,
+    common_flags: c_uchar,
+    common_preempt_count: c_uchar,
+    common_pid: c_int,
+    id: c_long,
+    ret: c_long,
+}
+
+#[raw_tracepoint]
+pub fn sikte_raw_trace_point_at_exit(ctx: RawTracePointContext) -> u32 {
+    match try_sys_exit(ctx) {
+        Ok(ret) => ret,
+        Err(ret) => ret,
+    }
+}
+
+pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, u32> {
+    let timestamp = unsafe { bpf_ktime_get_ns() };
+
+    let pid_tgid = bpf_get_current_pid_tgid();
+    let tgid = (pid_tgid >> 32) as u32;
+    let pid = (pid_tgid & (u32::MAX as u64)) as u32;
+
+    let args = ctx.as_ptr() as *const SysExit;
+    let syscall_nr: c_long = unsafe {
+        const SYSCALL_ID_OFFSET: usize = core::mem::offset_of!(SysExit, id);
+
+        match bpf_probe_read_kernel(args.byte_add(SYSCALL_ID_OFFSET) as *const c_long) {
+            Ok(syscall) => syscall,
+            Err(err) => {
+                error!(&ctx, "error sys_exit: {}", err);
+                return Err(err as u32);
+            }
         }
+    };
+
+    info!(
+        &ctx,
+        // "[ns: {}, tgid: {}, pid: {}] exit syscall {} ", timestamp, tgid, pid, syscall_nr,
+        "exit  syscall {} ",
+        syscall_nr,
     );
     Ok(0)
 }
