@@ -4,7 +4,6 @@ use aya_ebpf::{
     programs::TracePointContext,
 };
 use aya_log_ebpf::info;
-use sikte_common::{SyscallData, SyscallState};
 
 #[tracepoint]
 pub fn sikte_trace_points(ctx: TracePointContext) -> u32 {
