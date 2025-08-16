@@ -1,16 +1,13 @@
 #[derive(Copy, Clone)]
 pub enum SyscallState {
-    AtEnter,
-    AtExit,
+    AtEnter { syscall_id: u64 },
+    AtExit { syscall_ret: u64 },
 }
-
-pub type SyscallName = [u8; 150];
 
 #[repr(C)]
 pub struct SyscallData {
     pub timestamp: u64,
     pub tgid: u32,
     pub pid: u32,
-    pub syscall: u64,
     pub state: SyscallState,
 }
