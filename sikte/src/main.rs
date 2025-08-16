@@ -1,5 +1,6 @@
 mod programs;
 use aya::programs::{RawTracePoint, TracePoint};
+use log::info;
 use programs::{get_raw_tracepoints_program, get_tracepoints_program, load_ebpf_object};
 
 #[rustfmt::skip]
@@ -50,11 +51,13 @@ async fn main() -> anyhow::Result<()> {
     let program_syscalls_enter: &mut RawTracePoint =
         get_raw_tracepoints_program(&mut ebpf, sikte_common::SyscallState::AtEnter);
     program_syscalls_enter.load()?;
-    program_syscalls_enter.attach("sys_enter")?;
+    info!("Attaching raw tracepoint to sys_enter...");
+    // program_syscalls_enter.attach("sys_enter")?;
 
     let program_syscalls_exit: &mut RawTracePoint =
         get_raw_tracepoints_program(&mut ebpf, sikte_common::SyscallState::AtExit);
     program_syscalls_exit.load()?;
+    info!("Attaching raw tracepoint to sys_exit...");
     program_syscalls_exit.attach("sys_exit")?;
 
     let ctrl_c = signal::ctrl_c();
