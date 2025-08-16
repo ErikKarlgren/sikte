@@ -1,7 +1,8 @@
 use aya::{
     Ebpf,
-    programs::{PerfEvent, Program, TracePoint},
+    programs::{PerfEvent, Program, RawTracePoint, TracePoint},
 };
+use sikte_common::SyscallState;
 
 pub fn load_ebpf_object() -> anyhow::Result<Ebpf> {
     // This will include your eBPF object file as raw bytes at compile-time and load it at
@@ -28,4 +29,20 @@ pub fn get_tracepoints_program(ebpf: &mut Ebpf) -> &mut TracePoint {
     let name = "sikte_trace_points";
     let program = ebpf.program_mut(name).expect("program exists");
     program.try_into().expect("program is TracePoint")
+}
+
+pub fn get_raw_tracepoints_program(
+    ebpf: &mut Ebpf,
+    syscall_state: SyscallState,
+) -> &mut RawTracePoint {
+    let name = format!(
+        "sikte_raw_trace_point_at_{}",
+        match syscall_state {
+            SyscallState::AtEnter => "enter",
+            SyscallState::AtExit => "exit",
+        }
+    );
+
+    let program = ebpf.program_mut(&name).expect("program exists");
+    program.try_into().expect("program is RawTracePoint")
 }
