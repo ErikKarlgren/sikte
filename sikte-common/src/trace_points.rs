@@ -11,6 +11,6 @@ pub struct SyscallData {
     pub timestamp: u64,
     pub tgid: u32,
     pub pid: u32,
+    pub syscall: u64,
     pub state: SyscallState,
-    pub name: SyscallName,
 }
