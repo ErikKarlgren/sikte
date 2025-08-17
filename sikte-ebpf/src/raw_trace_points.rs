@@ -29,7 +29,7 @@ pub fn try_sys_enter(ctx: RawTracePointContext) -> Result<u32, u32> {
     let pid_tgid = bpf_get_current_pid_tgid();
     let tgid = (pid_tgid >> 32) as u32;
 
-    if !is_tgid_in_whitelist(tgid as pid_t) {
+    if !is_tgid_in_allowlist(tgid as pid_t) {
         return Ok(0);
     }
 
@@ -73,7 +73,7 @@ pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, u32> {
     let pid_tgid = bpf_get_current_pid_tgid();
     let tgid = (pid_tgid >> 32) as u32;
 
-    if !is_tgid_in_whitelist(tgid as pid_t) {
+    if !is_tgid_in_allowlist(tgid as pid_t) {
         return Ok(0);
     }
 
@@ -108,7 +108,7 @@ pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, u32> {
     }
 }
 
-fn is_tgid_in_whitelist(pid: pid_t) -> bool {
+fn is_tgid_in_allowlist(pid: pid_t) -> bool {
     (0..NUM_ALLOWED_PIDS)
         .into_iter()
         .map(|idx| PID_ALLOW_LIST.get(idx))
