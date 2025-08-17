@@ -1,0 +1,12 @@
+# Tasks
+- [ ] Make cli accept mandatory PID
+- [ ] Make ebpf program always filter by PID
+- [ ] Show syscalls (sys enter and exit) for that PID
+- [ ] Calculate time spent per syscall
+- [ ] Print time spent per syscall
+- [ ] Map syscall IDs to their names (userspace?)
+- [ ] Add a syscall filter using array. Should work for x64, arm, ...
+- [ ] 
+- [ ] 
+- [ ] 
+- [ ] 
