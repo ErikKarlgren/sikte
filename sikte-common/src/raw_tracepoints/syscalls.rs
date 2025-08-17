@@ -1,7 +1,7 @@
 #[derive(Copy, Clone)]
 pub enum SyscallState {
-    AtEnter { syscall_id: u64 },
-    AtExit { syscall_ret: u64 },
+    AtEnter { syscall_id: i64 },
+    AtExit { syscall_ret: i64 },
 }
 
 #[repr(C)]

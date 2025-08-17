@@ -8,7 +8,7 @@ use aya_ebpf::{
     programs::RawTracePointContext,
 };
 use aya_log_ebpf::{error, info, warn};
-use sikte_common::{SyscallData, SyscallState};
+use sikte_common::raw_tracepoints::syscalls::{SyscallData, SyscallState};
 
 #[map]
 static SYSCALL_EVENTS: RingBuf = RingBuf::with_byte_size(4096 * 4, 0);
