@@ -7,6 +7,7 @@ use aya::{
     programs::{PerfEvent, RawTracePoint, TracePoint, perf_event},
     util::online_cpus,
 };
+use bytemuck::checked;
 use clap::{Parser, Subcommand};
 use itertools::Itertools;
 use log::{debug, error, info, warn};
@@ -14,7 +15,7 @@ use programs::{
     get_perf_events_program, get_raw_tp_sys_enter_program, get_raw_tp_sys_exit_program,
     get_tracepoints_program, load_ebpf_object,
 };
-use sikte_common::raw_tracepoints::syscalls::{NUM_ALLOWED_PIDS, pid_t};
+use sikte_common::raw_tracepoints::syscalls::{NUM_ALLOWED_PIDS, SyscallData, SyscallState, pid_t};
 use std::{
     borrow::Borrow,
     cmp,
@@ -173,7 +174,27 @@ async fn read_syscall_data<T: Borrow<MapData>>(
 
         while let Some(item) = ring_buf.next() {
             num_events += 1;
-            info!("{item:?}");
+
+            let raw_data: &[u8] = &item;
+            let syscall_data = checked::try_from_bytes::<SyscallData>(raw_data).map_err(|err| {
+                anyhow!(format!("Could not parse SyscallData: {}", err.to_string()))
+            })?;
+
+            let SyscallData {
+                timestamp,
+                tgid,
+                pid,
+                state,
+            } = *syscall_data;
+
+            match state {
+                SyscallState::AtEnter { syscall_id } => {
+                    info!("{timestamp} ns | PID {tgid} TID {pid} | syscall {syscall_id}");
+                }
+                SyscallState::AtExit { syscall_ret } => {
+                    info!("{timestamp} ns | PID {tgid} TID {pid} | returned {syscall_ret}");
+                }
+            }
 
             if num_events % MAX_EVENTS_BATCH_SIZE == 0 {
                 yield_now().await;
