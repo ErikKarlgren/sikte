@@ -8,13 +8,13 @@ build:
 check:
     cargo check && cargo clippy
 
-run +args: build
+run *args: build
     RUST_BACKTRACE=1 RUST_LOG=info  cargo run --config 'target."cfg(all())".runner="sudo -E"' -- {{args}}
 
-run-log-debug +args: build
+run-log-debug *args: build
     RUST_BACKTRACE=1 RUST_LOG=debug cargo run --config 'target."cfg(all())".runner="sudo -E"' -- {{args}}
 
-run-log-trace +args: build
+run-log-trace *args: build
     RUST_BACKTRACE=1 RUST_LOG=trace cargo run --config 'target."cfg(all())".runner="sudo -E"' -- {{args}}
 
 fix:
@@ -23,4 +23,4 @@ fix:
 # Aliases
 b: build
 c: check
-r +args: (run args)
+r *args: (run args)
