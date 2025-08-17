@@ -1,14 +1,17 @@
 use aya_ebpf::{
     EbpfContext,
-    bindings::{__u64, bpf_raw_tracepoint_args},
-    cty::{c_int, c_long, c_uchar, c_ulong, c_ushort},
-    helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns, bpf_probe_read_kernel},
+    cty::c_long,
+    helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns},
     macros::{map, raw_tracepoint},
     maps::RingBuf,
     programs::RawTracePointContext,
 };
-use aya_log_ebpf::{error, info, warn};
+use aya_log_ebpf::warn;
 use sikte_common::raw_tracepoints::syscalls::{SyscallData, SyscallState};
+
+/// Placeholder for the struct `pt_regs` from the Linux kernel. We don't need its actual data, just
+/// a pointer to it for documentation purposes.
+struct PtRegs {}
 
 #[map]
 static SYSCALL_EVENTS: RingBuf = RingBuf::with_byte_size(4096 * 4, 0);
@@ -29,8 +32,8 @@ pub fn try_sys_enter(ctx: RawTracePointContext) -> Result<u32, u32> {
     let pid = (pid_tgid & (u32::MAX as u64)) as u32;
 
     // https://elixir.bootlin.com/linux/v6.16/source/include/trace/events/syscalls.h#L20
-    let args = ctx.as_ptr() as *const [c_ulong; 2];
-    let syscall_id = unsafe { (*args)[1] };
+    let event = ctx.as_ptr() as *const (*const PtRegs, c_long);
+    let syscall_id = unsafe { (*event).1 };
 
     let data = SyscallData {
         timestamp,
@@ -69,8 +72,8 @@ pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, u32> {
     let pid = (pid_tgid & (u32::MAX as u64)) as u32;
 
     // https://elixir.bootlin.com/linux/v6.16/source/include/trace/events/syscalls.h#L46
-    let args = ctx.as_ptr() as *const [c_ulong; 2];
-    let syscall_ret = unsafe { (*args)[1] };
+    let event = ctx.as_ptr() as *const (*const PtRegs, c_long);
+    let syscall_ret = unsafe { (*event).1 };
 
     let data = SyscallData {
         timestamp,
