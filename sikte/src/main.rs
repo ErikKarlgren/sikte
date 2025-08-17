@@ -1,11 +1,31 @@
 mod programs;
-use aya::programs::{RawTracePoint, TracePoint};
+use std::{
+    borrow::Borrow,
+    convert::Infallible,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread::sleep,
+};
+
+use aya::{
+    maps::{MapData, RingBuf, ring_buf},
+    programs::{RawTracePoint, TracePoint},
+};
 use log::info;
-use programs::{get_raw_tracepoints_program, get_tracepoints_program, load_ebpf_object};
+use programs::{
+    get_raw_tp_sys_enter_program, get_raw_tp_sys_exit_program, get_tracepoints_program,
+    load_ebpf_object,
+};
 
 #[rustfmt::skip]
 use log::{debug, warn};
-use tokio::signal;
+use sikte_common::SyscallData;
+use tokio::{
+    io::{Interest, unix::AsyncFd},
+    signal,
+};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -48,22 +68,49 @@ async fn main() -> anyhow::Result<()> {
     // program.load()?;
     // program.attach("syscalls", "sys_enter_read")?;
 
-    let program_syscalls_enter: &mut RawTracePoint =
-        get_raw_tracepoints_program(&mut ebpf, sikte_common::SyscallState::AtEnter);
+    let program_syscalls_enter: &mut RawTracePoint = get_raw_tp_sys_enter_program(&mut ebpf);
     program_syscalls_enter.load()?;
     info!("Attaching raw tracepoint to sys_enter...");
-    // program_syscalls_enter.attach("sys_enter")?;
+    program_syscalls_enter.attach("sys_enter")?;
 
-    let program_syscalls_exit: &mut RawTracePoint =
-        get_raw_tracepoints_program(&mut ebpf, sikte_common::SyscallState::AtExit);
+    let program_syscalls_exit: &mut RawTracePoint = get_raw_tp_sys_exit_program(&mut ebpf);
     program_syscalls_exit.load()?;
     info!("Attaching raw tracepoint to sys_exit...");
     program_syscalls_exit.attach("sys_exit")?;
 
+    let interrupted = Arc::new(AtomicBool::new(false));
+
+    let syscalls_ring_buf = RingBuf::try_from(ebpf.take_map("SYSCALL_EVENTS").expect("map exists"))
+        .expect("map is of chosen type");
+    tokio::spawn(read_syscall_data(syscalls_ring_buf, interrupted.clone()));
+
     let ctrl_c = signal::ctrl_c();
     println!("Waiting for Ctrl-C...");
     ctrl_c.await?;
+    interrupted.store(true, Ordering::Relaxed);
     println!("Exiting...");
+
+    Ok(())
+}
+
+async fn read_syscall_data<T: Borrow<MapData>>(
+    ring_buf: RingBuf<T>,
+    interrupted: Arc<AtomicBool>,
+) -> anyhow::Result<()> {
+    let mut async_fd = AsyncFd::with_interest(ring_buf, Interest::READABLE)?;
+
+    while !interrupted.load(Ordering::Relaxed) {
+        let mut guard = async_fd.readable_mut().await?;
+        let ring_buf = guard.get_inner_mut();
+
+        while !interrupted.load(Ordering::Relaxed)
+            && let Some(item) = ring_buf.next()
+        {
+            info!("{item:?}");
+        }
+        info!("no more messages");
+        guard.clear_ready();
+    }
 
     Ok(())
 }
