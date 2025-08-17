@@ -11,6 +11,12 @@ check:
 run: build
     RUST_BACKTRACE=1 RUST_LOG=info cargo run --config 'target."cfg(all())".runner="sudo -E"'
 
+run-log-debug: build
+    RUST_BACKTRACE=1 RUST_LOG=debug cargo run --config 'target."cfg(all())".runner="sudo -E"'
+
+run-log-trace: build
+    RUST_BACKTRACE=1 RUST_LOG=trace cargo run --config 'target."cfg(all())".runner="sudo -E"'
+
 # Aliases
 b: build
 c: check
