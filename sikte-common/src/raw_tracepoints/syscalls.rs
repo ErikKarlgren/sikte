@@ -1,4 +1,4 @@
-use bytemuck::{AnyBitPattern, CheckedBitPattern};
+use bytemuck::CheckedBitPattern;
 
 /// Alias for a userspace PID. In the kernel this means the TGID, while PID is the thread ID for
 /// userpace. It corresponds to libc's definition, but this compiles for me.

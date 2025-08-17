@@ -10,7 +10,7 @@ use aya::{
 use bytemuck::checked;
 use clap::{Parser, Subcommand};
 use itertools::Itertools;
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use programs::{
     get_perf_events_program, get_raw_tp_sys_enter_program, get_raw_tp_sys_exit_program,
     get_tracepoints_program, load_ebpf_object,
