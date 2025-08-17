@@ -17,6 +17,9 @@ run-log-debug +args: build
 run-log-trace +args: build
     RUST_BACKTRACE=1 RUST_LOG=trace cargo run --config 'target."cfg(all())".runner="sudo -E"' -- {{args}}
 
+fix:
+    cargo clippy --fix --bin "sikte"
+
 # Aliases
 b: build
 c: check
