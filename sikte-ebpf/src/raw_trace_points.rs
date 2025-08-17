@@ -1,20 +1,21 @@
 use aya_ebpf::{
-    EbpfContext,
+    EbpfContext, PtRegs,
     cty::c_long,
     helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns},
     macros::{map, raw_tracepoint},
-    maps::RingBuf,
+    maps::{Array, RingBuf},
     programs::RawTracePointContext,
 };
-use aya_log_ebpf::warn;
-use sikte_common::raw_tracepoints::syscalls::{SyscallData, SyscallState};
-
-/// Placeholder for the struct `pt_regs` from the Linux kernel. We don't need its actual data, just
-/// a pointer to it for documentation purposes.
-struct PtRegs {}
+use aya_log_ebpf::{debug, info, warn};
+use sikte_common::raw_tracepoints::syscalls::{
+    MAX_SYSCALL_EVENTS, NUM_ALLOWED_PIDS, SyscallData, SyscallState, pid_t,
+};
 
 #[map]
-static SYSCALL_EVENTS: RingBuf = RingBuf::with_byte_size(4096 * 4, 0);
+static SYSCALL_EVENTS: RingBuf = RingBuf::with_byte_size(MAX_SYSCALL_EVENTS, 0);
+
+#[map]
+static PID_ALLOW_LIST: Array<pid_t> = Array::with_max_entries(NUM_ALLOWED_PIDS, 0);
 
 #[raw_tracepoint(tracepoint = "sys_enter")]
 pub fn sikte_raw_trace_point_at_enter(ctx: RawTracePointContext) -> u32 {
@@ -25,10 +26,14 @@ pub fn sikte_raw_trace_point_at_enter(ctx: RawTracePointContext) -> u32 {
 }
 
 pub fn try_sys_enter(ctx: RawTracePointContext) -> Result<u32, u32> {
-    let timestamp = unsafe { bpf_ktime_get_ns() };
-
     let pid_tgid = bpf_get_current_pid_tgid();
     let tgid = (pid_tgid >> 32) as u32;
+
+    if !is_tgid_in_whitelist(tgid as pid_t) {
+        return Ok(0);
+    }
+
+    let timestamp = unsafe { bpf_ktime_get_ns() };
     let pid = (pid_tgid & (u32::MAX as u64)) as u32;
 
     // https://elixir.bootlin.com/linux/v6.16/source/include/trace/events/syscalls.h#L20
@@ -56,7 +61,7 @@ pub fn try_sys_enter(ctx: RawTracePointContext) -> Result<u32, u32> {
     }
 }
 
-#[raw_tracepoint]
+#[raw_tracepoint(tracepoint = "sys_exit")]
 pub fn sikte_raw_trace_point_at_exit(ctx: RawTracePointContext) -> u32 {
     match try_sys_exit(ctx) {
         Ok(ret) => ret,
@@ -65,10 +70,14 @@ pub fn sikte_raw_trace_point_at_exit(ctx: RawTracePointContext) -> u32 {
 }
 
 pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, u32> {
-    let timestamp = unsafe { bpf_ktime_get_ns() };
-
     let pid_tgid = bpf_get_current_pid_tgid();
     let tgid = (pid_tgid >> 32) as u32;
+
+    if !is_tgid_in_whitelist(tgid as pid_t) {
+        return Ok(0);
+    }
+
+    let timestamp = unsafe { bpf_ktime_get_ns() };
     let pid = (pid_tgid & (u32::MAX as u64)) as u32;
 
     // https://elixir.bootlin.com/linux/v6.16/source/include/trace/events/syscalls.h#L46
@@ -97,4 +106,13 @@ pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, u32> {
         );
         Err(1)
     }
+}
+
+fn is_tgid_in_whitelist(pid: pid_t) -> bool {
+    (0..NUM_ALLOWED_PIDS)
+        .into_iter()
+        .map(|idx| PID_ALLOW_LIST.get(idx))
+        .flatten()
+        .find(|&&allowed_pid| allowed_pid == pid)
+        .is_some()
 }
