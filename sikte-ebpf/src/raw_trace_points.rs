@@ -3,11 +3,15 @@ use aya_ebpf::{
     bindings::{__u64, bpf_raw_tracepoint_args},
     cty::{c_int, c_long, c_uchar, c_ulong, c_ushort},
     helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns, bpf_probe_read_kernel},
-    macros::raw_tracepoint,
+    macros::{map, raw_tracepoint},
+    maps::RingBuf,
     programs::RawTracePointContext,
 };
-use aya_log_ebpf::{error, info};
-use sikte_common::SyscallState;
+use aya_log_ebpf::{error, info, warn};
+use sikte_common::{SyscallData, SyscallState};
+
+#[map]
+static SYSCALL_EVENTS: RingBuf = RingBuf::with_byte_size(4096 * 4, 0);
 
 #[raw_tracepoint(tracepoint = "sys_enter")]
 pub fn sikte_raw_trace_point_at_enter(ctx: RawTracePointContext) -> u32 {
@@ -24,16 +28,29 @@ pub fn try_sys_enter(ctx: RawTracePointContext) -> Result<u32, u32> {
     let tgid = (pid_tgid >> 32) as u32;
     let pid = (pid_tgid & (u32::MAX as u64)) as u32;
 
+    // https://elixir.bootlin.com/linux/v6.16/source/include/trace/events/syscalls.h#L20
     let args = ctx.as_ptr() as *const [c_ulong; 2];
-    let syscall_nr = unsafe { (*args)[1] };
+    let syscall_id = unsafe { (*args)[1] };
 
-    info!(
-        &ctx,
-        // "[ns: {}, tgid: {}, pid: {}] enter syscall {} ", timestamp, tgid, pid, syscall_nr,
-        "enter syscall {} ",
-        syscall_nr,
-    );
-    Ok(0)
+    let data = SyscallData {
+        timestamp,
+        tgid,
+        pid,
+        state: SyscallState::AtEnter { syscall_id },
+    };
+
+    let entry = SYSCALL_EVENTS.reserve::<SyscallData>(0);
+    if let Some(mut entry) = entry {
+        entry.write(data);
+        entry.submit(0);
+        Ok(0)
+    } else {
+        warn!(
+            &ctx,
+            "Dropped sys_enter data where tgid: {}, pid: {}, syscall id: {}", tgid, pid, syscall_id
+        );
+        Err(1)
+    }
 }
 
 #[raw_tracepoint]
@@ -51,19 +68,30 @@ pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, u32> {
     let tgid = (pid_tgid >> 32) as u32;
     let pid = (pid_tgid & (u32::MAX as u64)) as u32;
 
-    let bpf_rtp_args = ctx.as_ptr() as *const bpf_raw_tracepoint_args;
-    let args = bpf_rtp_args as *const [u64; 2];
+    // https://elixir.bootlin.com/linux/v6.16/source/include/trace/events/syscalls.h#L46
+    let args = ctx.as_ptr() as *const [c_ulong; 2];
     let syscall_ret = unsafe { (*args)[1] };
 
-    info!(
-        &ctx,
-        "[ns: {}, tgid: {}, pid: {}] exit syscall with ret {} ",
+    let data = SyscallData {
         timestamp,
         tgid,
         pid,
-        syscall_ret as i64,
-        // "exit  syscall {} ",
-        syscall_nr,
-    );
-    Ok(0)
+        state: SyscallState::AtExit { syscall_ret },
+    };
+
+    let entry = SYSCALL_EVENTS.reserve::<SyscallData>(0);
+    if let Some(mut entry) = entry {
+        entry.write(data);
+        entry.submit(0);
+        Ok(0)
+    } else {
+        warn!(
+            &ctx,
+            "Dropped sys_exit  data where tgid: {}, pid: {}, syscall ret: {}",
+            tgid,
+            pid,
+            syscall_ret
+        );
+        Err(1)
+    }
 }
