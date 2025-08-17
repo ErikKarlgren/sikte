@@ -1,8 +1,7 @@
 use aya::{
     Ebpf,
-    programs::{PerfEvent, Program, RawTracePoint, TracePoint},
+    programs::{PerfEvent, RawTracePoint, TracePoint},
 };
-use sikte_common::SyscallState;
 
 pub fn load_ebpf_object() -> anyhow::Result<Ebpf> {
     // This will include your eBPF object file as raw bytes at compile-time and load it at

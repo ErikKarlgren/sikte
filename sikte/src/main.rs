@@ -1,12 +1,10 @@
 mod programs;
 use std::{
     borrow::Borrow,
-    convert::Infallible,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
     },
-    thread::sleep,
 };
 
 use aya::{
