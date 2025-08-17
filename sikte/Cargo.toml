@@ -13,15 +13,18 @@ aya = { workspace = true }
 aya-log = { workspace = true }
 clap = { workspace = true }
 env_logger = { workspace = true }
+itertools = { workspace = true }
 libc = { workspace = true }
 log = { workspace = true }
 tokio = { workspace = true, features = [
     "macros",
     "net",
+    "process",
     "rt",
     "rt-multi-thread",
     "signal",
 ] }
+
 [build-dependencies]
 anyhow = { workspace = true }
 aya-build = { workspace = true }
