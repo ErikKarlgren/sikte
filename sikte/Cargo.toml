@@ -11,6 +11,7 @@ sikte-common = { path = "../sikte-common", features = ["user"] }
 anyhow = { workspace = true, default-features = true }
 aya = { workspace = true }
 aya-log = { workspace = true }
+bytemuck = { workspace = true }
 clap = { workspace = true }
 env_logger = { workspace = true }
 itertools = { workspace = true }
