@@ -31,18 +31,16 @@ pub fn get_tracepoints_program(ebpf: &mut Ebpf) -> &mut TracePoint {
     program.try_into().expect("program is TracePoint")
 }
 
-pub fn get_raw_tracepoints_program(
-    ebpf: &mut Ebpf,
-    syscall_state: SyscallState,
-) -> &mut RawTracePoint {
-    let name = format!(
-        "sikte_raw_trace_point_at_{}",
-        match syscall_state {
-            SyscallState::AtEnter => "enter",
-            SyscallState::AtExit => "exit",
-        }
-    );
+/// Get the raw trace points program for sys_enter
+pub fn get_raw_tp_sys_enter_program(ebpf: &mut Ebpf) -> &mut RawTracePoint {
+    let name = "sikte_raw_trace_point_at_enter";
+    let program = ebpf.program_mut(name).expect("program exists");
+    program.try_into().expect("program is RawTracePoint")
+}
 
-    let program = ebpf.program_mut(&name).expect("program exists");
+/// Get the raw trace points program for sys_exit
+pub fn get_raw_tp_sys_exit_program(ebpf: &mut Ebpf) -> &mut RawTracePoint {
+    let name = "sikte_raw_trace_point_at_exit";
+    let program = ebpf.program_mut(name).expect("program exists");
     program.try_into().expect("program is RawTracePoint")
 }
