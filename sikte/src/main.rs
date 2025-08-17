@@ -13,7 +13,7 @@ use aya::{
     maps::{MapData, RingBuf, ring_buf},
     programs::{RawTracePoint, TracePoint},
 };
-use log::info;
+use log::{info, trace};
 use programs::{
     get_raw_tp_sys_enter_program, get_raw_tp_sys_exit_program, get_tracepoints_program,
     load_ebpf_object,
@@ -25,6 +25,7 @@ use sikte_common::SyscallData;
 use tokio::{
     io::{Interest, unix::AsyncFd},
     signal,
+    task::yield_now,
 };
 
 #[tokio::main]
@@ -87,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
     let ctrl_c = signal::ctrl_c();
     println!("Waiting for Ctrl-C...");
     ctrl_c.await?;
-    interrupted.store(true, Ordering::Relaxed);
+    interrupted.store(true, Ordering::Release);
     println!("Exiting...");
 
     Ok(())
@@ -98,18 +99,27 @@ async fn read_syscall_data<T: Borrow<MapData>>(
     interrupted: Arc<AtomicBool>,
 ) -> anyhow::Result<()> {
     let mut async_fd = AsyncFd::with_interest(ring_buf, Interest::READABLE)?;
+    let mut num_events = 0u64;
+    const MAX_EVENTS_BATCH_SIZE: u64 = 100_000;
 
-    while !interrupted.load(Ordering::Relaxed) {
+    while !interrupted.load(Ordering::Acquire) {
         let mut guard = async_fd.readable_mut().await?;
         let ring_buf = guard.get_inner_mut();
 
-        while !interrupted.load(Ordering::Relaxed)
-            && let Some(item) = ring_buf.next()
-        {
-            info!("{item:?}");
+        while let Some(item) = ring_buf.next() {
+            num_events += 1;
+            debug!("{item:?}");
+
+            if num_events % MAX_EVENTS_BATCH_SIZE == 0 {
+                yield_now().await;
+                if interrupted.load(Ordering::Acquire) {
+                    return Ok(());
+                }
+            }
         }
-        info!("no more messages");
+        debug!("no more messages");
         guard.clear_ready();
+        yield_now().await;
     }
 
     Ok(())
