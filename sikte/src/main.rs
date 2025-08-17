@@ -10,26 +10,45 @@ use std::{
 };
 
 use aya::{
-    maps::{MapData, RingBuf, ring_buf},
-    programs::{RawTracePoint, TracePoint},
+    Ebpf,
+    maps::{MapData, RingBuf},
+    programs::{PerfEvent, RawTracePoint, TracePoint, perf_event},
+    util::online_cpus,
 };
-use log::{info, trace};
+use clap::{Parser, Subcommand};
+use log::info;
 use programs::{
-    get_raw_tp_sys_enter_program, get_raw_tp_sys_exit_program, get_tracepoints_program,
-    load_ebpf_object,
+    get_perf_events_program, get_raw_tp_sys_enter_program, get_raw_tp_sys_exit_program,
+    get_tracepoints_program, load_ebpf_object,
 };
 
 #[rustfmt::skip]
 use log::{debug, warn};
-use sikte_common::SyscallData;
 use tokio::{
     io::{Interest, unix::AsyncFd},
     signal,
     task::yield_now,
 };
 
+#[derive(Subcommand, Debug, Clone, Copy)]
+enum CliAction {
+    /// Trace syscalls using raw tracepoints
+    Syscalls { pid: u64 },
+    /// Perf events (to be done)
+    PerfEvents,
+}
+
+#[derive(Parser, Debug)]
+#[command(version, about)]
+struct CliArgs {
+    #[command(subcommand)]
+    action: CliAction,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let cli = CliArgs::parse();
+
     env_logger::init();
 
     // Bump the memlock rlimit. This is needed for older kernels that don't use the
@@ -50,25 +69,23 @@ async fn main() -> anyhow::Result<()> {
         warn!("failed to initialize eBPF logger: {e}");
     }
 
-    // // This will raise scheduled events on each CPU at 1 HZ, triggered by the kernel based
-    // // on clock ticks.
-    // let perf_event_program: &mut PerfEvent = get_perf_events_program(&mut ebpf);
-    // perf_event_program.load()?;
-    //
-    // for cpu in online_cpus().map_err(|(_, error)| error)? {
-    //     perf_event_program.attach(
-    //         perf_event::PerfTypeId::Software,
-    //         perf_event::perf_sw_ids::PERF_COUNT_SW_CPU_CLOCK as u64,
-    //         perf_event::PerfEventScope::AllProcessesOneCpu { cpu },
-    //         perf_event::SamplePolicy::Frequency(1),
-    //         true,
-    //     )?;
-    // }
+    let interrupted = Arc::new(AtomicBool::new(false));
 
-    // let program: &mut TracePoint = get_tracepoints_program(&mut ebpf);
-    // program.load()?;
-    // program.attach("syscalls", "sys_enter_read")?;
+    _ = match cli.action {
+        CliAction::Syscalls { .. } => syscalls(ebpf, interrupted.clone())?,
+        CliAction::PerfEvents => perf_events(ebpf)?,
+    };
 
+    let ctrl_c = signal::ctrl_c();
+    println!("Waiting for Ctrl-C...");
+    ctrl_c.await?;
+    interrupted.store(true, Ordering::Release);
+    println!("Exiting...");
+
+    Ok(())
+}
+
+fn syscalls(mut ebpf: Ebpf, interrupted: Arc<AtomicBool>) -> anyhow::Result<Ebpf> {
     let program_syscalls_enter: &mut RawTracePoint = get_raw_tp_sys_enter_program(&mut ebpf);
     program_syscalls_enter.load()?;
     info!("Attaching raw tracepoint to sys_enter...");
@@ -79,19 +96,11 @@ async fn main() -> anyhow::Result<()> {
     info!("Attaching raw tracepoint to sys_exit...");
     program_syscalls_exit.attach("sys_exit")?;
 
-    let interrupted = Arc::new(AtomicBool::new(false));
-
     let syscalls_ring_buf = RingBuf::try_from(ebpf.take_map("SYSCALL_EVENTS").expect("map exists"))
         .expect("map is of chosen type");
     tokio::spawn(read_syscall_data(syscalls_ring_buf, interrupted.clone()));
 
-    let ctrl_c = signal::ctrl_c();
-    println!("Waiting for Ctrl-C...");
-    ctrl_c.await?;
-    interrupted.store(true, Ordering::Release);
-    println!("Exiting...");
-
-    Ok(())
+    Ok(ebpf)
 }
 
 async fn read_syscall_data<T: Borrow<MapData>>(
@@ -123,4 +132,27 @@ async fn read_syscall_data<T: Borrow<MapData>>(
     }
 
     Ok(())
+}
+
+fn perf_events(mut ebpf: Ebpf) -> anyhow::Result<Ebpf> {
+    // This will raise scheduled events on each CPU at 1 HZ, triggered by the kernel based
+    // on clock ticks.
+    let perf_event_program: &mut PerfEvent = get_perf_events_program(&mut ebpf);
+    perf_event_program.load()?;
+
+    for cpu in online_cpus().map_err(|(_, error)| error)? {
+        perf_event_program.attach(
+            perf_event::PerfTypeId::Software,
+            perf_event::perf_sw_ids::PERF_COUNT_SW_CPU_CLOCK as u64,
+            perf_event::PerfEventScope::AllProcessesOneCpu { cpu },
+            perf_event::SamplePolicy::Frequency(1),
+            true,
+        )?;
+    }
+
+    let program: &mut TracePoint = get_tracepoints_program(&mut ebpf);
+    program.load()?;
+    program.attach("syscalls", "sys_enter_read")?;
+
+    Ok(ebpf)
 }
