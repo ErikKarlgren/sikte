@@ -19,6 +19,7 @@ run-log-trace *args: build
 
 fix:
     cargo clippy --fix
+    cargo +nightly fmt
     git add .
     git commit -m "chore(clippy): run fixes"
 
