@@ -20,6 +20,7 @@ use sikte_common::raw_tracepoints::syscalls::{NUM_ALLOWED_PIDS, SyscallData, Sys
 use std::{
     borrow::Borrow,
     cmp,
+    collections::HashMap,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -169,6 +170,8 @@ async fn read_syscall_data<T: Borrow<MapData>>(
     let mut num_events = 0u64;
     const MAX_EVENTS_BATCH_SIZE: u64 = 1000;
 
+    let mut thr_to_last_syscall: HashMap<u32, SyscallData> = HashMap::new();
+
     while !interrupted.load(Ordering::Acquire) {
         info!("reading...");
         let mut guard = async_fd.readable_mut().await?;
@@ -184,19 +187,28 @@ async fn read_syscall_data<T: Borrow<MapData>>(
 
             let SyscallData {
                 timestamp,
-                tgid,
-                pid,
                 state,
+                // convert from kernel tgid/pid notation -> userspace pid/tid
+                tgid: _pid,
+                pid: tid,
             } = *syscall_data;
 
             match state {
                 SyscallState::AtEnter { syscall_id } => {
                     let syscall_name = to_syscall_name(syscall_id).unwrap_or("UNKNOWN");
-                    info!("{timestamp} ns | PID {tgid} | TID {pid} | {syscall_name}");
+                    info!("{timestamp} ns | TID {tid} | Start \"{syscall_name}\"");
+
+                    thr_to_last_syscall.insert(tid, *syscall_data);
                 }
-                SyscallState::AtExit { syscall_ret } => {
-                    info!("{timestamp} ns | PID {tgid} | TID {pid} | -> {syscall_ret}");
-                }
+                SyscallState::AtExit { .. } => match thr_to_last_syscall.remove(&tid) {
+                    Some(last_data) => {
+                        let time = timestamp - last_data.timestamp;
+                        info!("{timestamp} ns | TID {tid} | Finished in {time} ns");
+                    }
+                    None => {
+                        info!("BUG: previous 'at enter' data not found for syscall");
+                    }
+                },
             }
 
             if num_events % MAX_EVENTS_BATCH_SIZE == 0 {
