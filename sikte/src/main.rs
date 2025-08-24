@@ -1,4 +1,5 @@
 mod programs;
+mod syscalls;
 
 use anyhow::anyhow;
 use aya::{
