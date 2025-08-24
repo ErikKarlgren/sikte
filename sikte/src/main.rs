@@ -5,38 +5,15 @@ mod syscalls;
 
 use crate::perf_events::main::perf_events;
 use crate::syscalls::main::syscalls;
-use anyhow::anyhow;
-use aya::{
-    Ebpf,
-    maps::{Array, MapData, RingBuf},
-    programs::{PerfEvent, RawTracePoint, TracePoint, perf_event},
-    util::online_cpus,
-};
-use bytemuck::checked;
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use cli::args::{CliAction, CliArgs};
-use itertools::Itertools;
-use log::{debug, info, warn};
-use programs::{
-    get_perf_events_program, get_raw_tp_sys_enter_program, get_raw_tp_sys_exit_program,
-    get_tracepoints_program, load_ebpf_object,
-};
-use sikte_common::raw_tracepoints::syscalls::{NUM_ALLOWED_PIDS, SyscallData, SyscallState, pid_t};
-use std::{
-    borrow::Borrow,
-    cmp,
-    collections::HashMap,
-    sync::{
+use log::{debug, warn};
+use programs::load_ebpf_object;
+use std::sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
-    },
-};
-use tokio::{
-    io::{Interest, unix::AsyncFd},
-    process::Command,
-    signal,
-    task::yield_now,
-};
+    };
+use tokio::signal;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

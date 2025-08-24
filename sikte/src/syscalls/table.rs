@@ -440,7 +440,7 @@ const fn build_syscall_table() -> [&'static str; MAX_NUM_SYSCALLS] {
     t[546] = "preadv2 (x32)";
     t[547] = "pwritev2 (x32)";
 
-    return t;
+    t
 }
 
 #[cfg(not(target_arch = "x86_64"))]

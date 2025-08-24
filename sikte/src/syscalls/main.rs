@@ -2,13 +2,11 @@ use anyhow::anyhow;
 use aya::{
     Ebpf,
     maps::{Array, MapData, RingBuf},
-    programs::{PerfEvent, RawTracePoint, TracePoint, perf_event},
-    util::online_cpus,
+    programs::RawTracePoint,
 };
 use bytemuck::checked;
-use clap::{Parser, Subcommand};
 use itertools::Itertools;
-use log::{debug, info, warn};
+use log::info;
 use sikte_common::raw_tracepoints::syscalls::{NUM_ALLOWED_PIDS, SyscallData, SyscallState, pid_t};
 use std::{
     borrow::Borrow,
