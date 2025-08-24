@@ -3,7 +3,9 @@
 - [x] Make ebpf program always filter by PID
 - [x] Show syscalls (sys enter and exit) for PIDs given
 - [x] Execute commands and track their syscalls
-- [ ] Calculate time spent per syscall
-- [ ] Print time spent per syscall
-- [ ] Map syscall IDs to their names (userspace?)
+- [x] Map syscall IDs to their names (userspace?)
+- [x] Calculate time spent per syscall
+- [x] Print time spent per syscall
 - [ ] Add a syscall filter using array. Should work for x64, arm, ...
+- [ ] Make command not start immediately so as to ensure we're tracking all of its syscalls and not lose some information at the beginning (it can send a sigstop signal to self)
+- [ ] Fix ctrl-c bug: if command has finished, i shouldn't need to press ctrl-c
