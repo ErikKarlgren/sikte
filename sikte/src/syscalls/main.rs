@@ -1,3 +1,13 @@
+use std::{
+    borrow::Borrow,
+    cmp,
+    collections::HashMap,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+};
+
 use anyhow::anyhow;
 use aya::{
     Ebpf,
@@ -8,15 +18,6 @@ use bytemuck::checked;
 use itertools::Itertools;
 use log::info;
 use sikte_common::raw_tracepoints::syscalls::{NUM_ALLOWED_PIDS, SyscallData, SyscallState, pid_t};
-use std::{
-    borrow::Borrow,
-    cmp,
-    collections::HashMap,
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
-};
 use tokio::{
     io::{Interest, unix::AsyncFd},
     process::Command,

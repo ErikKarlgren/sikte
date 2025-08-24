@@ -3,17 +3,18 @@ mod perf_events;
 mod programs;
 mod syscalls;
 
-use crate::perf_events::main::perf_events;
-use crate::syscalls::main::syscalls;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+
 use clap::Parser;
 use cli::args::{CliAction, CliArgs};
 use log::{debug, warn};
 use programs::load_ebpf_object;
-use std::sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    };
 use tokio::signal;
+
+use crate::{perf_events::main::perf_events, syscalls::main::syscalls};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
