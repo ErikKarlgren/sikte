@@ -25,6 +25,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
 };
+use syscalls::table::to_syscall_name;
 use tokio::{
     io::{Interest, unix::AsyncFd},
     process::Command,
@@ -190,10 +191,11 @@ async fn read_syscall_data<T: Borrow<MapData>>(
 
             match state {
                 SyscallState::AtEnter { syscall_id } => {
-                    info!("{timestamp} ns | PID {tgid} TID {pid} | syscall {syscall_id}");
+                    let syscall_name = to_syscall_name(syscall_id).unwrap_or("UNKNOWN");
+                    info!("{timestamp} ns | PID {tgid} | TID {pid} | {syscall_name}");
                 }
                 SyscallState::AtExit { syscall_ret } => {
-                    info!("{timestamp} ns | PID {tgid} TID {pid} | returned {syscall_ret}");
+                    info!("{timestamp} ns | PID {tgid} | TID {pid} | -> {syscall_ret}");
                 }
             }
 
