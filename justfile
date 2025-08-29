@@ -8,14 +8,15 @@ build:
 check:
     cargo check && cargo clippy
 
-run *args: build
-    RUST_BACKTRACE=1 RUST_LOG=info  cargo run --config 'target."cfg(all())".runner="sudo -E"' -- {{args}}
+run log_level *args: build
+    RUST_BACKTRACE=1 RUST_LOG={{log_level}} cargo run --config 'target."cfg(all())".runner="sudo -E"' -- {{args}}
 
-run-log-debug *args: build
-    RUST_BACKTRACE=1 RUST_LOG=debug cargo run --config 'target."cfg(all())".runner="sudo -E"' -- {{args}}
+run-log-info *args: (run "info" args)
+run-log-debug *args: (run "debug" args)
+run-log-trace *args: (run "trace" args)
 
-run-log-trace *args: build
-    RUST_BACKTRACE=1 RUST_LOG=trace cargo run --config 'target."cfg(all())".runner="sudo -E"' -- {{args}}
+test:
+    RUST_BACKTRACE=1 cargo test
 
 fix:
     cargo clippy --fix
@@ -27,3 +28,4 @@ fix:
 b: build
 c: check
 r *args: (run args)
+t: test
