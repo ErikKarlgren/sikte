@@ -7,5 +7,14 @@
 - [x] Calculate time spent per syscall
 - [x] Print time spent per syscall
 - [ ] Add a syscall filter using array. Should work for x64, arm, ...
-- [ ] Make command not start immediately so as to ensure we're tracking all of its syscalls and not lose some information at the beginning (it can send a sigstop signal to self)
 - [ ] Fix ctrl-c bug: if command has finished, i shouldn't need to press ctrl-c
+- [ ] Refactor sikte to make my life easier (make more modules)
+
+
+- [-] Make command not start immediately so as to ensure we're tracking all of its syscalls and not lose some information at the beginning (it can send a sigstop signal to self)
+  - I tried creating the structs PasuableCommand and PausedCommand, but working with fork() and exec() was getting crazy, and the results brittle
+  - I'll use an eBPF trace point for sched_process_fork, which seems to be far more reliable
+
+## Trace points
+- [ ] Add trace point to sched_process_fork for detecting when a command is launched
+  - Take a look at this: https://www.nccgroup.com/research-blog/some-musings-on-common-ebpf-linux-tracing-bugs/
