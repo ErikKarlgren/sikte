@@ -30,5 +30,5 @@ fix:
 # Aliases
 b: build
 c: check
-r *args: (run args)
+r *args: (run-log-info args)
 t: test
