@@ -25,7 +25,7 @@ use tokio::{
 };
 
 use crate::{
-    cli::args::SyscallsAction,
+    cli::args::{Target, TargetArgs},
     programs::{get_raw_tp_sys_enter_program, get_raw_tp_sys_exit_program},
     syscalls::table::to_syscall_name,
 };
@@ -33,7 +33,7 @@ use crate::{
 pub async fn syscalls(
     mut ebpf: Ebpf,
     interrupted: Arc<AtomicBool>,
-    action: SyscallsAction,
+    target: TargetArgs,
 ) -> anyhow::Result<Ebpf> {
     let program_syscalls_enter: &mut RawTracePoint = get_raw_tp_sys_enter_program(&mut ebpf);
     program_syscalls_enter.load()?;
@@ -53,8 +53,8 @@ pub async fn syscalls(
         .expect("map is of chosen type");
     tokio::spawn(read_syscall_data(syscalls_ring_buf, interrupted.clone()));
 
-    match action {
-        SyscallsAction::Follow { pids } => {
+    match target.to_target() {
+        Target::Pid(pids) => {
             let max_pids = cmp::min(
                 NUM_ALLOWED_PIDS,
                 cmp::min(pids.len(), u32::MAX as usize) as u32,
@@ -72,7 +72,7 @@ pub async fn syscalls(
                     .collect::<String>()
             );
         }
-        SyscallsAction::Run { command_args } => {
+        Target::Command(command_args) => {
             if command_args.is_empty() {
                 return Err(anyhow!("Command is empty"));
             }

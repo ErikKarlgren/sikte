@@ -8,9 +8,9 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-use clap::Parser;
-use cli::args::{CliAction, CliArgs};
-use log::{debug, warn};
+use clap::{CommandFactory, Parser};
+use cli::args::*;
+use log::{Record, debug, warn};
 use programs::load_ebpf_object;
 use tokio::signal;
 
@@ -18,7 +18,24 @@ use crate::{perf_events::main::perf_events, syscalls::main::syscalls};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let cli = CliArgs::parse();
+    let args = Cli::parse();
+
+    if let Commands::Record(RecordArgs {
+        options:
+            TracingOptions {
+                syscalls: false,
+                perf_events: false,
+            },
+        ..
+    }) = args.command
+    {
+        Cli::command()
+            .error(
+                clap::error::ErrorKind::TooFewValues,
+                "You need to set what to trace!",
+            )
+            .exit();
+    }
 
     env_logger::init();
 
@@ -42,10 +59,17 @@ async fn main() -> anyhow::Result<()> {
 
     let interrupted = Arc::new(AtomicBool::new(false));
 
-    _ = match cli.action {
-        CliAction::Syscalls { action } => syscalls(ebpf, interrupted.clone(), action).await?,
-        CliAction::PerfEvents => perf_events(ebpf)?,
-    };
+    match args.command {
+        Commands::Record(RecordArgs { target, options }) => {
+            if options.syscalls {
+                syscalls(ebpf, interrupted.clone(), target).await?;
+            }
+            if options.perf_events {
+                // TODO:: work on perf_events
+                // perf_events(ebpf)?;
+            }
+        }
+    }
 
     let ctrl_c = signal::ctrl_c();
     println!("Waiting for Ctrl-C...");
