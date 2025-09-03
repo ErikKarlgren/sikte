@@ -18,3 +18,7 @@
 ## Trace points
 - [ ] Add trace point to sched_process_fork for detecting when a command is launched
   - Take a look at this: https://www.nccgroup.com/research-blog/some-musings-on-common-ebpf-linux-tracing-bugs/
+- [ ] Add normal trace points for every syscall (or at least the most interesting ones)
+  - Would make my life much easier for showing syscall args
+  - With this you can print all the syscall trace points for your kernel version: `sudo bpftrace -l 'tracepoint:syscalls:*'`
+  - Using aya-tool i can supposedly generate the required bindings automatically
