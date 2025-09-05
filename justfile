@@ -27,6 +27,14 @@ fix:
     git add .
     git commit -m "chore(clippy): run fixes"
 
+docker-build:
+    # Build inside docker container
+    docker build --target builder -t sikte-builder .
+    # Run container, and copy binary to target directory
+    mkdir -p target/from-docker/
+    docker run --rm -v $(pwd):/output sikte-builder cp /app/target/release/sikte /output/target/from-docker/
+    # Finished: you can find the binary in /output/target/from-docker/
+
 # Aliases
 b: build
 c: check

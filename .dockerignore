@@ -1,0 +1,9 @@
+LICENSE
+justfile
+rustfmt.toml
+
+*.md
+.*
+
+scripts/
+scripts/*
