@@ -11,12 +11,11 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+    - name: Build with Docker
+      run: ./scripts/docker-build.sh
+    - name: Run tests with Docker
+      run: ./scripts/docker-test.sh
