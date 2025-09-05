@@ -9,6 +9,8 @@
 - [ ] Add a syscall filter using array. Should work for x64, arm, ...
 - [ ] Fix ctrl-c bug: if command has finished, i shouldn't need to press ctrl-c
 - [ ] Refactor sikte to make my life easier (make more modules)
+  - [ ] Refactor eBPF program creation and loading
+  - [ ] Create "SyscallDataConsumer" trait? One for printing to shell, another for storing to sqlite
 
 
 - [-] Make command not start immediately so as to ensure we're tracking all of its syscalls and not lose some information at the beginning (it can send a sigstop signal to self)
