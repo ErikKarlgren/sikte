@@ -1,7 +1,6 @@
 mod cli;
-mod perf_events;
+mod producers;
 mod programs;
-mod syscalls;
 
 use std::sync::{
     Arc,
