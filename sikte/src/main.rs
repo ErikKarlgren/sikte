@@ -1,8 +1,8 @@
 mod cli;
 mod consumers;
+mod ebpf;
 mod events;
 mod producers;
-mod programs;
 
 use std::sync::{
     Arc,
@@ -11,9 +11,9 @@ use std::sync::{
 
 use clap::{CommandFactory, Parser};
 use cli::args::*;
+use ebpf::SikteEbpf;
 use log::{debug, warn};
 use producers::syscalls;
-use programs::load_ebpf_object;
 use tokio::signal;
 
 #[tokio::main]
@@ -50,9 +50,8 @@ async fn main() -> anyhow::Result<()> {
         debug!("remove limit on locked memory failed, ret is: {ret}");
     }
 
-    let mut ebpf = load_ebpf_object()?;
-
-    if let Err(e) = aya_log::EbpfLogger::init(&mut ebpf) {
+    let mut ebpf = SikteEbpf::load()?;
+    if let Err(e) = ebpf.init_logger() {
         // This can happen if you remove all log statements from your eBPF program.
         warn!("failed to initialize eBPF logger: {e}");
     }
