@@ -16,8 +16,9 @@ use aya::{
 };
 use bytemuck::checked;
 use itertools::Itertools;
+use libc::pid_t;
 use log::info;
-use sikte_common::raw_tracepoints::syscalls::{NUM_ALLOWED_PIDS, SyscallData, SyscallState, pid_t};
+use sikte_common::raw_tracepoints::syscalls::{NUM_ALLOWED_PIDS, PidT, SyscallData, SyscallState};
 use tokio::{
     io::{Interest, unix::AsyncFd},
     process::Command,
@@ -45,7 +46,7 @@ pub async fn syscalls(
     info!("Attaching raw tracepoint to sys_exit...");
     program_syscalls_exit.attach("sys_exit")?;
 
-    let mut pid_allow_list: Array<_, pid_t> =
+    let mut pid_allow_list: Array<_, PidT> =
         Array::try_from(ebpf.take_map("PID_ALLOW_LIST").expect("map exists"))
             .expect("map is of chosen type");
 
@@ -83,7 +84,7 @@ pub async fn syscalls(
             info!("Running program: {command_args:?}");
             let mut child = Command::new(program).args(args).spawn()?;
             let pid = child.id().expect("program shouldn't have stopped yet");
-            pid_allow_list.set(0, pid as pid_t, 0)?;
+            pid_allow_list.set(0, pid as PidT, 0)?;
 
             child.wait().await?;
         }
@@ -100,7 +101,7 @@ async fn read_syscall_data<T: Borrow<MapData>>(
     let mut num_events = 0u64;
     const MAX_EVENTS_BATCH_SIZE: u64 = 1000;
 
-    let mut thr_to_last_syscall: HashMap<u32, SyscallData> = HashMap::new();
+    let mut thr_to_last_syscall: HashMap<pid_t, SyscallData> = HashMap::new();
 
     while !interrupted.load(Ordering::Acquire) {
         info!("reading...");
