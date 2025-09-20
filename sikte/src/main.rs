@@ -1,4 +1,6 @@
 mod cli;
+mod consumers;
+mod events;
 mod producers;
 mod programs;
 
@@ -9,11 +11,10 @@ use std::sync::{
 
 use clap::{CommandFactory, Parser};
 use cli::args::*;
-use log::{Record, debug, warn};
+use log::{debug, warn};
+use producers::syscalls;
 use programs::load_ebpf_object;
 use tokio::signal;
-
-use crate::{perf_events::main::perf_events, syscalls::main::syscalls};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

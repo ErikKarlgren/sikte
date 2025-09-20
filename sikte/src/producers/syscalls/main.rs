@@ -26,8 +26,8 @@ use tokio::{
 
 use crate::{
     cli::args::{Target, TargetArgs},
+    producers::syscalls::table::to_syscall_name,
     programs::{get_raw_tp_sys_enter_program, get_raw_tp_sys_exit_program},
-    syscalls::table::to_syscall_name,
 };
 
 pub async fn syscalls(
