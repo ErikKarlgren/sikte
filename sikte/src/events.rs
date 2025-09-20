@@ -27,22 +27,29 @@ impl EventBus {
     where
         S: EventSubscriber + Send + 'static,
     {
-        let mut rx = self.sender.subscribe();
-        let name = subscriber.get_name();
+        let rx = self.sender.subscribe();
+        tokio::spawn(subscription(subscriber, rx));
+    }
+}
 
-        tokio::spawn(async move {
-            match rx.recv().await {
-                Ok(event) => match event {
-                    Event::Syscall(syscall_data) => subscriber.read_syscall(&syscall_data),
-                },
-                Err(err) => match err {
-                    RecvError::Closed => {
-                        debug!("Event bus was closed. Finished subscription for {name}");
-                        return;
-                    }
-                    RecvError::Lagged(n) => debug!("{name} has lagged by {n} messages"),
-                },
-            }
-        });
+async fn subscription<S>(subscriber: S, mut rx: Receiver<Event>)
+where
+    S: EventSubscriber + Send + 'static,
+{
+    let name = subscriber.get_name();
+
+    loop {
+        match rx.recv().await {
+            Ok(event) => match event {
+                Event::Syscall(syscall_data) => subscriber.read_syscall(&syscall_data),
+            },
+            Err(err) => match err {
+                RecvError::Closed => {
+                    debug!("Event bus was closed. Finished subscription for {name}");
+                    break;
+                }
+                RecvError::Lagged(n) => debug!("{name} has lagged by {n} messages"),
+            },
+        }
     }
 }
