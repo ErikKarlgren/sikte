@@ -1,8 +1,11 @@
-use log::debug;
+use log::{debug, error};
 use sikte_common::raw_tracepoints::syscalls::SyscallData;
-use tokio::sync::broadcast::{Receiver, Sender, error::RecvError};
+use tokio::{
+    sync::broadcast::{Receiver, Sender, error::RecvError},
+    task::JoinHandle,
+};
 
-use crate::consumers::EventSubscriber;
+use crate::{consumers::EventSubscriber, producers::EventPublisher};
 
 /// Enum for representing all the possible eBPF events in this program
 #[derive(Clone)]
@@ -14,30 +17,64 @@ pub enum Event {
 /// Multiple-producer & multiple-consumer event bus
 pub struct EventBus {
     sender: Sender<Event>,
-    receiver: Receiver<Event>,
+    join_handles: Vec<JoinHandle<()>>,
 }
 
 impl EventBus {
-    pub fn get_sender(&self) -> Sender<Event> {
-        self.sender.clone()
+    /// Create a new `EventBus`
+    pub fn new() -> EventBus {
+        let (sender, _) = tokio::sync::broadcast::channel(1024);
+        EventBus {
+            sender,
+            join_handles: vec![],
+        }
+    }
+
+    /// Spawn a publishment task that will run inside tokio
+    pub fn spawn_publishment<P>(&mut self, publisher: P)
+    where
+        P: EventPublisher + Send + 'static,
+    {
+        let tx = self.sender.clone();
+        let handle = tokio::spawn(publishment(publisher, tx));
+        self.join_handles.push(handle);
     }
 
     /// Spawn a subscription task that will run inside tokio
-    pub async fn spawn_subscription<S>(&self, subscriber: S)
+    pub fn spawn_subscription<S>(&mut self, subscriber: S)
     where
         S: EventSubscriber + Send + 'static,
     {
         let rx = self.sender.subscribe();
-        tokio::spawn(subscription(subscriber, rx));
+        let handle = tokio::spawn(subscription(subscriber, rx));
+        self.join_handles.push(handle);
     }
 }
 
-async fn subscription<S>(subscriber: S, mut rx: Receiver<Event>)
+impl Drop for EventBus {
+    fn drop(&mut self) {
+        for handle in &self.join_handles {
+            handle.abort();
+        }
+    }
+}
+
+async fn publishment<P>(mut publisher: P, tx: Sender<Event>)
+where
+    P: EventPublisher + Send + 'static,
+{
+    loop {
+        let event = publisher.publish_event().await;
+        if let Err(err) = tx.send(event) {
+            error!("Error while publishing: {err}");
+        }
+    }
+}
+
+async fn subscription<S>(mut subscriber: S, mut rx: Receiver<Event>)
 where
     S: EventSubscriber + Send + 'static,
 {
-    let name = subscriber.get_name();
-
     loop {
         match rx.recv().await {
             Ok(event) => match event {
@@ -45,10 +82,15 @@ where
             },
             Err(err) => match err {
                 RecvError::Closed => {
-                    debug!("Event bus was closed. Finished subscription for {name}");
+                    debug!(
+                        "Event bus was closed. Finished subscription for {}",
+                        subscriber.get_name()
+                    );
                     break;
                 }
-                RecvError::Lagged(n) => debug!("{name} has lagged by {n} messages"),
+                RecvError::Lagged(n) => {
+                    debug!("{} has lagged by {} messages", subscriber.get_name(), n)
+                }
             },
         }
     }
