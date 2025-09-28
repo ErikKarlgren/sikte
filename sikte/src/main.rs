@@ -9,7 +9,6 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-use clap::{CommandFactory, Parser};
 use cli::args::*;
 use ebpf::SikteEbpf;
 use events::EventBus;
@@ -20,25 +19,7 @@ use tokio::signal;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let args = Cli::parse();
-
-    if let Commands::Record(RecordArgs {
-        options:
-            TracingOptions {
-                syscalls: false,
-                perf_events: false,
-            },
-        ..
-    }) = args.command
-    {
-        Cli::command()
-            .error(
-                clap::error::ErrorKind::TooFewValues,
-                "You need to set what to trace!",
-            )
-            .exit();
-    }
-
+    let args = Cli::parse_args();
     env_logger::init();
     bump_memlock_rlimit();
 
