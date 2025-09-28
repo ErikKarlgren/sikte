@@ -13,9 +13,4 @@ impl PidAllowList<'_> {
     pub fn insert(&mut self, pid: pid_t) -> Result<(), MapError> {
         self.0.insert(pid, 0, 0)
     }
-
-    /// Remove a PID from the allowlist
-    pub fn remove(&mut self, pid: pid_t) -> Result<(), MapError> {
-        self.0.remove(&pid)
-    }
 }
