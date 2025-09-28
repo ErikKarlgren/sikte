@@ -1,22 +1,21 @@
-use std::borrow::Borrow;
-
-use aya::maps::{Array, MapData, RingBuf};
+use aya::maps::{HashMap, MapData, MapError, RingBuf};
 use libc::pid_t;
-
-/// Helper trait for ringbuf data. Send is required to be able to access ring bufs from async tasks
-// pub trait IsRingBufData: MapData + Send {}
-// pub trait IsRingBufData: Borrow<MapData> + Send {}
+use sikte_common::generic_types::Unused;
 
 /// Syscall ring buffer
-// pub struct SyscallRingBuf<'ebpf, T: Borrow<MapData>>(pub RingBuf<&'ebpf T>);
-// pub struct SyscallRingBuf<T: IsRingBufData>(pub RingBuf<T>);
 pub struct SyscallRingBuf(pub RingBuf<MapData>);
 
-/// PID allow list
-// pub struct PidAllowList<'ebpf>(pub Array<&'ebpf mut MapData, pid_t>);
-// TODO: refactor into a "PID allow set"
-pub struct PidAllowList<'ebpf>(pub Array<&'ebpf MapData, pid_t>);
+/// PID allow list. It uses an ebpf hashmap internally, where the value is unused
+pub struct PidAllowList<'ebpf>(pub HashMap<&'ebpf mut MapData, pid_t, Unused>);
 
 impl PidAllowList<'_> {
-    // TODO: add code here
+    /// Insert a PID into the allowlist
+    pub fn insert(&mut self, pid: pid_t) -> Result<(), MapError> {
+        self.0.insert(pid, 0, 0)
+    }
+
+    /// Remove a PID from the allowlist
+    pub fn remove(&mut self, pid: pid_t) -> Result<(), MapError> {
+        self.0.remove(&pid)
+    }
 }

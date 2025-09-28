@@ -35,21 +35,16 @@ pub async fn syscalls(
     mut ebpf: SikteEbpf,
     interrupted: Arc<AtomicBool>,
     target: TargetArgs,
-) -> anyhow::Result<Ebpf> {
-    let mut pid_allow_list = ebpf.pid_allow_list_mut();
+) -> anyhow::Result<SikteEbpf> {
     let syscalls_ring_buf = ebpf.take_syscalls_ringbuf();
+    let mut pid_allow_list = ebpf.pid_allow_list_mut();
 
     tokio::spawn(read_syscall_data(syscalls_ring_buf.0, interrupted.clone()));
 
     match target.to_target() {
         Target::Pid(pids) => {
-            let max_pids = cmp::min(
-                NUM_ALLOWED_PIDS,
-                cmp::min(pids.len(), u32::MAX as usize) as u32,
-            );
-
-            for i in 0..max_pids {
-                pid_allow_list.0.set(i, pids[i as usize], 0)?;
+            for pid in &pids {
+                pid_allow_list.insert(*pid)?
             }
 
             info!(
@@ -71,7 +66,7 @@ pub async fn syscalls(
             info!("Running program: {command_args:?}");
             let mut child = Command::new(program).args(args).spawn()?;
             let pid = child.id().expect("program shouldn't have stopped yet");
-            pid_allow_list.0.set(0, pid as PidT, 0)?;
+            pid_allow_list.insert(pid as pid_t)?;
 
             child.wait().await?;
         }

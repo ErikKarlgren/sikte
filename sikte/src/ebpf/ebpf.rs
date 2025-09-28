@@ -3,10 +3,11 @@ use std::{borrow::Borrow, fmt::Debug};
 use super::{error::EbpfError, map_types::*};
 use aya::{
     Ebpf,
-    maps::{Array, MapData, RingBuf},
+    maps::{Array, HashMap, MapData, RingBuf},
     programs::{PerfEvent, Program, ProgramError, RawTracePoint, TracePoint},
 };
 use aya_log::EbpfLogger;
+use libc::pid_t;
 use log::debug;
 use sikte_common::constants::{attach_points::*, program_names::*};
 
@@ -107,7 +108,7 @@ impl SikteEbpf {
 
     /// Return a mutable view to the PID allow list array map
     pub fn pid_allow_list_mut(&mut self) -> PidAllowList {
-        let list = Array::try_from(self.ebpf.map("PID_ALLOW_LIST").expect("map exists"))
+        let list = HashMap::try_from(self.ebpf.map_mut("PID_ALLOW_LIST").expect("map exists"))
             .expect("map is of chosen type");
         PidAllowList(list)
     }
