@@ -11,7 +11,7 @@ use sikte_common::raw_tracepoints::syscalls::{
     MAX_SYSCALL_EVENTS, PidT, SyscallData, SyscallState,
 };
 
-use crate::common::PID_ALLOW_LIST;
+use crate::common::{PID_ALLOW_LIST, is_tgid_in_allowlist, submit_or_else};
 
 #[map]
 static SYSCALL_EVENTS: RingBuf = RingBuf::with_byte_size(MAX_SYSCALL_EVENTS, 0);
@@ -46,18 +46,12 @@ pub fn try_sys_enter(ctx: RawTracePointContext) -> Result<u32, u32> {
         state: SyscallState::AtEnter { syscall_id },
     };
 
-    let entry = SYSCALL_EVENTS.reserve::<SyscallData>(0);
-    if let Some(mut entry) = entry {
-        entry.write(data);
-        entry.submit(0);
-        Ok(0)
-    } else {
+    submit_or_else(&SYSCALL_EVENTS, data, || {
         warn!(
             &ctx,
             "Dropped sys_enter data where tgid: {}, pid: {}, syscall id: {}", tgid, pid, syscall_id
         );
-        Err(1)
-    }
+    })
 }
 
 #[raw_tracepoint(tracepoint = "sys_exit")]
@@ -90,12 +84,7 @@ pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, u32> {
         state: SyscallState::AtExit { syscall_ret },
     };
 
-    let entry = SYSCALL_EVENTS.reserve::<SyscallData>(0);
-    if let Some(mut entry) = entry {
-        entry.write(data);
-        entry.submit(0);
-        Ok(0)
-    } else {
+    submit_or_else(&SYSCALL_EVENTS, data, || {
         warn!(
             &ctx,
             "Dropped sys_exit  data where tgid: {}, pid: {}, syscall ret: {}",
@@ -103,10 +92,5 @@ pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, u32> {
             pid,
             syscall_ret
         );
-        Err(1)
-    }
-}
-
-fn is_tgid_in_allowlist(tgid: PidT) -> bool {
-    unsafe { PID_ALLOW_LIST.get(&tgid).is_some() }
+    })
 }
