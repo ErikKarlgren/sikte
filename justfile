@@ -11,7 +11,7 @@ build-release:
 check:
     cargo check && cargo clippy
 
-run *args: (run-log "info")
+run *args: (run-log "info" args)
 
 run-log log_level *args: build
     RUST_BACKTRACE=1 RUST_LOG={{log_level}} cargo run --config 'target."cfg(all())".runner="sudo -E"' -- {{args}}
