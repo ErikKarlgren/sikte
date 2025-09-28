@@ -2,7 +2,7 @@ use bytemuck::CheckedBitPattern;
 
 /// Alias for a userspace PID. In the kernel this means the TGID, while PID is the thread ID for
 /// userpace. It corresponds to libc's definition, but this compiles for me.
-pub type pid_t = i32;
+pub type PidT = i32;
 
 #[repr(C, align(8))]
 #[derive(Copy, Clone, Debug, CheckedBitPattern)]
@@ -16,8 +16,8 @@ pub enum SyscallState {
 #[derive(Copy, Clone, Debug, CheckedBitPattern)]
 pub struct SyscallData {
     pub timestamp: u64,
-    pub tgid: u32,
-    pub pid: u32,
+    pub tgid: PidT,
+    pub pid: PidT,
     pub state: SyscallState,
 }
 

@@ -3,19 +3,22 @@ use aya_ebpf::{
     cty::c_long,
     helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns},
     macros::{map, raw_tracepoint},
-    maps::{Array, RingBuf},
+    maps::{HashMap, RingBuf},
     programs::RawTracePointContext,
 };
-use aya_log_ebpf::{debug, info, warn};
-use sikte_common::raw_tracepoints::syscalls::{
-    MAX_SYSCALL_EVENTS, NUM_ALLOWED_PIDS, SyscallData, SyscallState, pid_t,
+use aya_log_ebpf::warn;
+use sikte_common::{
+    generic_types::Unused,
+    raw_tracepoints::syscalls::{
+        MAX_SYSCALL_EVENTS, NUM_ALLOWED_PIDS, PidT, SyscallData, SyscallState,
+    },
 };
 
 #[map]
 static SYSCALL_EVENTS: RingBuf = RingBuf::with_byte_size(MAX_SYSCALL_EVENTS, 0);
 
 #[map]
-static PID_ALLOW_LIST: Array<pid_t> = Array::with_max_entries(NUM_ALLOWED_PIDS, 0);
+static PID_ALLOW_LIST: HashMap<PidT, Unused> = HashMap::with_max_entries(NUM_ALLOWED_PIDS, 0);
 
 #[raw_tracepoint(tracepoint = "sys_enter")]
 pub fn sikte_raw_trace_point_at_enter(ctx: RawTracePointContext) -> u32 {
@@ -27,14 +30,14 @@ pub fn sikte_raw_trace_point_at_enter(ctx: RawTracePointContext) -> u32 {
 
 pub fn try_sys_enter(ctx: RawTracePointContext) -> Result<u32, u32> {
     let pid_tgid = bpf_get_current_pid_tgid();
-    let tgid = (pid_tgid >> 32) as u32;
+    let tgid = (pid_tgid >> 32) as PidT;
 
-    if !is_tgid_in_allowlist(tgid as pid_t) {
+    if !is_tgid_in_allowlist(tgid) {
         return Ok(0);
     }
 
     let timestamp = unsafe { bpf_ktime_get_ns() };
-    let pid = (pid_tgid & (u32::MAX as u64)) as u32;
+    let pid = (pid_tgid & (u32::MAX as u64)) as PidT;
 
     // https://elixir.bootlin.com/linux/v6.16/source/include/trace/events/syscalls.h#L20
     let event = ctx.as_ptr() as *const (*const PtRegs, c_long);
@@ -71,14 +74,14 @@ pub fn sikte_raw_trace_point_at_exit(ctx: RawTracePointContext) -> u32 {
 
 pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, u32> {
     let pid_tgid = bpf_get_current_pid_tgid();
-    let tgid = (pid_tgid >> 32) as u32;
+    let tgid = (pid_tgid >> 32) as PidT;
 
-    if !is_tgid_in_allowlist(tgid as pid_t) {
+    if !is_tgid_in_allowlist(tgid) {
         return Ok(0);
     }
 
     let timestamp = unsafe { bpf_ktime_get_ns() };
-    let pid = (pid_tgid & (u32::MAX as u64)) as u32;
+    let pid = (pid_tgid & (u32::MAX as u64)) as PidT;
 
     // https://elixir.bootlin.com/linux/v6.16/source/include/trace/events/syscalls.h#L46
     let event = ctx.as_ptr() as *const (*const PtRegs, c_long);
@@ -108,11 +111,6 @@ pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, u32> {
     }
 }
 
-fn is_tgid_in_allowlist(pid: pid_t) -> bool {
-    (0..NUM_ALLOWED_PIDS)
-        .into_iter()
-        .map(|idx| PID_ALLOW_LIST.get(idx))
-        .flatten()
-        .find(|&&allowed_pid| allowed_pid == pid)
-        .is_some()
+fn is_tgid_in_allowlist(tgid: PidT) -> bool {
+    unsafe { PID_ALLOW_LIST.get(&tgid).is_some() }
 }

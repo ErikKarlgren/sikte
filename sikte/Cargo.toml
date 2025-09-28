@@ -24,7 +24,9 @@ tokio = { workspace = true, features = [
     "rt",
     "rt-multi-thread",
     "signal",
+    "sync",
 ] }
+thiserror = { workspace = true }
 
 [build-dependencies]
 anyhow = { workspace = true }

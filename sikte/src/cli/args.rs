@@ -1,4 +1,5 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand};
+use log::debug;
 
 #[derive(Debug, Parser)]
 #[command(name = "sikte")]
@@ -6,6 +7,33 @@ use clap::{Args, Parser, Subcommand};
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
+}
+
+impl Cli {
+    /// Parse args and do some checks
+    pub fn parse_args() -> Self {
+        let args = Cli::parse();
+
+        if let Commands::Record(RecordArgs {
+            options:
+                TracingOptions {
+                    syscalls: false,
+                    perf_events: false,
+                },
+            ..
+        }) = args.command
+        {
+            Cli::command()
+                .error(
+                    clap::error::ErrorKind::TooFewValues,
+                    "You need to set what to trace!",
+                )
+                .exit();
+        }
+
+        debug!("parsing args succeded");
+        args
+    }
 }
 
 #[derive(Debug, Subcommand)]
