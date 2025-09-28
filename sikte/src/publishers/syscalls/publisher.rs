@@ -10,19 +10,13 @@ use tokio::{
 };
 
 use crate::{
-    ebpf::{
-        SysEnterProgram, SysExitProgram,
-        map_types::{PidAllowList, SyscallRingBuf},
-    },
+    ebpf::{SysEnterProgram, SysExitProgram, map_types::SyscallRingBuf},
     events::Event,
     publishers::EventPublisher,
 };
-use std::{
-    borrow::Borrow,
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
 };
 
 /// Requirements for SyscallPublisher

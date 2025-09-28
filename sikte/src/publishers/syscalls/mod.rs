@@ -1,6 +1,6 @@
 pub mod main;
-mod producer;
+mod publisher;
 mod table;
 
-pub use producer::{Requirements, SyscallPublisher};
+pub use publisher::{Requirements, SyscallPublisher};
 pub use table::to_syscall_name;

@@ -14,7 +14,7 @@ pub enum Event {
     Syscall(SyscallData),
 }
 
-/// Multiple-producer & multiple-consumer event bus
+/// Multiple-publisher & multiple-consumer event bus
 pub struct EventBus {
     sender: Sender<Event>,
     join_handles: Vec<JoinHandle<()>>,

@@ -25,13 +25,13 @@
   - Using aya-tool i can supposedly generate the required bindings automatically
 
 ## Architecture (sikte)
-We should have a multiple-producer and multiple-consumer architecture with sth like the following:
+We should have a multiple-publisher and multiple-consumer architecture with sth like the following:
 ```text
 ######## eBPF ########   ############################ user space ############################
 
-syscall_ringbuffer -------> SyscallProducer ---+               +-> ShellConsumer -> stdout
+syscall_ringbuffer -------> Syscallpublisher ---+               +-> ShellConsumer -> stdout
                                                |-> EventQueue -|
-perf_events_ringbuffer ---> PerfEventProducer -+    (tokio)    +-> DBConsumer ----> sqlite
+perf_events_ringbuffer ---> PerfEventpublisher -+    (tokio)    +-> DBConsumer ----> sqlite
 
 ```
 - Add more publishers as you add more eBPF events
