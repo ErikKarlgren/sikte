@@ -5,7 +5,7 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::{consumers::EventSubscriber, producers::EventPublisher};
+use crate::{publishers::EventPublisher, subscribers::EventSubscriber};
 
 /// Enum for representing all the possible eBPF events in this program
 #[derive(Clone)]
@@ -64,8 +64,8 @@ where
     P: EventPublisher + Send + 'static,
 {
     loop {
-        let event = publisher.publish_event().await;
-        if let Err(err) = tx.send(event) {
+        let num_events = publisher.publish_events(&tx).await;
+        if let Err(err) = num_events {
             error!("Error while publishing: {err}");
         }
     }

@@ -1,8 +1,8 @@
 mod cli;
-mod consumers;
 mod ebpf;
 mod events;
-mod producers;
+mod publishers;
+mod subscribers;
 
 use std::sync::{
     Arc,
@@ -12,8 +12,10 @@ use std::sync::{
 use clap::{CommandFactory, Parser};
 use cli::args::*;
 use ebpf::SikteEbpf;
-use log::{debug, warn};
-use producers::syscalls;
+use events::EventBus;
+use log::{debug, info, warn};
+use publishers::syscalls::{self, Requirements, SyscallPublisher};
+use subscribers::ShellSubscriber;
 use tokio::signal;
 
 #[tokio::main]
@@ -48,10 +50,22 @@ async fn main() -> anyhow::Result<()> {
 
     let interrupted = Arc::new(AtomicBool::new(false));
 
+    let mut event_bus = EventBus::new();
+    event_bus.spawn_subscription(ShellSubscriber::new());
+
     match args.command {
         Commands::Record(RecordArgs { target, options }) => {
             if options.syscalls {
-                syscalls(ebpf, interrupted.clone(), target).await?;
+                let sys_enter = ebpf.attach_sys_enter_program()?;
+                let sys_exit = ebpf.attach_sys_exit_program()?;
+                let requirements = syscalls::Requirements::new(sys_enter, sys_exit);
+
+                // TODO: setup according to target
+                let mut pid_allow_list = ebpf.pid_allow_list_mut();
+
+                let ring_buf = ebpf.take_syscalls_ringbuf();
+                let publisher = SyscallPublisher::new(requirements, ring_buf, interrupted.clone())?;
+                event_bus.spawn_publishment(publisher);
             }
             if options.perf_events {
                 // TODO:: work on perf_events
