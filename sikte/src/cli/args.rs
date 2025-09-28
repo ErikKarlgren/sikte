@@ -1,4 +1,5 @@
 use clap::{Args, CommandFactory, Parser, Subcommand};
+use log::debug;
 
 #[derive(Debug, Parser)]
 #[command(name = "sikte")]
@@ -29,6 +30,8 @@ impl Cli {
                 )
                 .exit();
         }
+
+        debug!("parsing args succeded");
         args
     }
 }
