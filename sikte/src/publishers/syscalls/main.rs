@@ -27,32 +27,19 @@ use tokio::{
 
 use crate::{
     cli::args::{Target, TargetArgs},
-    producers::syscalls::table::to_syscall_name,
-    programs::{get_raw_tp_sys_enter_program, get_raw_tp_sys_exit_program},
+    ebpf::SikteEbpf,
+    publishers::syscalls::table::to_syscall_name,
 };
 
 pub async fn syscalls(
-    mut ebpf: Ebpf,
+    mut ebpf: SikteEbpf,
     interrupted: Arc<AtomicBool>,
     target: TargetArgs,
 ) -> anyhow::Result<Ebpf> {
-    let program_syscalls_enter: &mut RawTracePoint = get_raw_tp_sys_enter_program(&mut ebpf);
-    program_syscalls_enter.load()?;
-    info!("Attaching raw tracepoint to sys_enter...");
-    program_syscalls_enter.attach("sys_enter")?;
+    let mut pid_allow_list = ebpf.pid_allow_list_mut();
+    let syscalls_ring_buf = ebpf.take_syscalls_ringbuf();
 
-    let program_syscalls_exit: &mut RawTracePoint = get_raw_tp_sys_exit_program(&mut ebpf);
-    program_syscalls_exit.load()?;
-    info!("Attaching raw tracepoint to sys_exit...");
-    program_syscalls_exit.attach("sys_exit")?;
-
-    let mut pid_allow_list: Array<_, PidT> =
-        Array::try_from(ebpf.take_map("PID_ALLOW_LIST").expect("map exists"))
-            .expect("map is of chosen type");
-
-    let syscalls_ring_buf = RingBuf::try_from(ebpf.take_map("SYSCALL_EVENTS").expect("map exists"))
-        .expect("map is of chosen type");
-    tokio::spawn(read_syscall_data(syscalls_ring_buf, interrupted.clone()));
+    tokio::spawn(read_syscall_data(syscalls_ring_buf.0, interrupted.clone()));
 
     match target.to_target() {
         Target::Pid(pids) => {
@@ -62,7 +49,7 @@ pub async fn syscalls(
             );
 
             for i in 0..max_pids {
-                pid_allow_list.set(i, pids[i as usize], 0)?;
+                pid_allow_list.0.set(i, pids[i as usize], 0)?;
             }
 
             info!(
@@ -84,7 +71,7 @@ pub async fn syscalls(
             info!("Running program: {command_args:?}");
             let mut child = Command::new(program).args(args).spawn()?;
             let pid = child.id().expect("program shouldn't have stopped yet");
-            pid_allow_list.set(0, pid as PidT, 0)?;
+            pid_allow_list.0.set(0, pid as PidT, 0)?;
 
             child.wait().await?;
         }

@@ -4,8 +4,6 @@ use aya::{
     util::online_cpus,
 };
 
-use crate::programs::{get_perf_events_program, get_tracepoints_program};
-
 pub fn perf_events(mut ebpf: Ebpf) -> anyhow::Result<Ebpf> {
     // This will raise scheduled events on each CPU at 1 HZ, triggered by the kernel based
     // on clock ticks.
