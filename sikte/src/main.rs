@@ -4,18 +4,22 @@ mod events;
 mod publishers;
 mod subscribers;
 
+use anyhow::anyhow;
+use cli::args::*;
+use ebpf::SikteEbpf;
+use events::EventBus;
+use itertools::Itertools;
+use libc::pid_t;
+use log::{debug, info, warn};
+use publishers::syscalls::{self, Requirements, SyscallPublisher};
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
-
-use cli::args::*;
-use ebpf::SikteEbpf;
-use events::EventBus;
-use log::{debug, info, warn};
-use publishers::syscalls::{self, Requirements, SyscallPublisher};
 use subscribers::ShellSubscriber;
-use tokio::signal;
+use tokio::{process::Command, signal};
+
+use crate::{ebpf::map_types::PidAllowList, publishers::perf_events};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -41,16 +45,15 @@ async fn main() -> anyhow::Result<()> {
                 let sys_exit = ebpf.attach_sys_exit_program()?;
                 let requirements = syscalls::Requirements::new(sys_enter, sys_exit);
 
-                // TODO: setup according to target
                 let mut pid_allow_list = ebpf.pid_allow_list_mut();
+                add_pids_to_allowlist(target, &mut pid_allow_list).await?;
 
                 let ring_buf = ebpf.take_syscalls_ringbuf();
                 let publisher = SyscallPublisher::new(requirements, ring_buf, interrupted.clone())?;
                 event_bus.spawn_publishment(publisher);
             }
             if options.perf_events {
-                // TODO:: work on perf_events
-                // perf_events(ebpf)?;
+                perf_events(ebpf)?;
             }
         }
     }
@@ -81,4 +84,41 @@ fn bump_memlock_rlimit() {
     if ret != 0 {
         debug!("remove limit on locked memory failed, ret is: {ret}");
     }
+}
+
+async fn add_pids_to_allowlist(
+    target: TargetArgs,
+    pid_allow_list: &mut PidAllowList<'_>,
+) -> anyhow::Result<()> {
+    match target.to_target() {
+        Target::Pid(pids) => {
+            for pid in &pids {
+                pid_allow_list.insert(*pid)?
+            }
+
+            info!(
+                "Tracing the following PIDs: {}",
+                pids.iter()
+                    .map(|pid| pid.to_string())
+                    .intersperse(", ".to_string())
+                    .collect::<String>()
+            );
+        }
+        Target::Command(command_args) => {
+            if command_args.is_empty() {
+                return Err(anyhow!("Command is empty"));
+            }
+
+            let program = &command_args[0];
+            let args = &command_args[1..];
+
+            info!("Running program: {command_args:?}");
+            let mut child = Command::new(program).args(args).spawn()?;
+            let pid = child.id().expect("program shouldn't have stopped yet");
+            pid_allow_list.insert(pid as pid_t)?;
+
+            child.wait().await?;
+        }
+    }
+    Ok(())
 }

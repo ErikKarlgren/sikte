@@ -1,14 +1,11 @@
-use aya::{
-    Ebpf,
-    programs::{PerfEvent, TracePoint, perf_event},
-    util::online_cpus,
-};
+use aya::{programs::perf_event, util::online_cpus};
 
-pub fn perf_events(mut ebpf: Ebpf) -> anyhow::Result<Ebpf> {
+use crate::ebpf::SikteEbpf;
+
+pub fn perf_events(mut ebpf: SikteEbpf) -> anyhow::Result<SikteEbpf> {
     // This will raise scheduled events on each CPU at 1 HZ, triggered by the kernel based
     // on clock ticks.
-    let perf_event_program: &mut PerfEvent = get_perf_events_program(&mut ebpf);
-    perf_event_program.load()?;
+    let perf_event_program = ebpf.load_perf_events_program()?;
 
     for cpu in online_cpus().map_err(|(_, error)| error)? {
         perf_event_program.attach(
@@ -19,10 +16,6 @@ pub fn perf_events(mut ebpf: Ebpf) -> anyhow::Result<Ebpf> {
             true,
         )?;
     }
-
-    let program: &mut TracePoint = get_tracepoints_program(&mut ebpf);
-    program.load()?;
-    program.attach("syscalls", "sys_enter_read")?;
 
     Ok(ebpf)
 }

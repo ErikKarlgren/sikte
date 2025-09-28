@@ -1,4 +1,3 @@
-pub mod main;
 mod publisher;
 mod table;
 
