@@ -22,15 +22,15 @@ use crate::{
 
 /// Requirements for SyscallPublisher
 pub struct Requirements {
-    sys_enter: SysEnterProgram,
-    sys_exit: SysExitProgram,
+    _sys_enter: SysEnterProgram,
+    _sys_exit: SysExitProgram,
 }
 
 impl Requirements {
     pub fn new(sys_enter: SysEnterProgram, sys_exit: SysExitProgram) -> Requirements {
         Requirements {
-            sys_enter,
-            sys_exit,
+            _sys_enter: sys_enter,
+            _sys_exit: sys_exit,
         }
     }
 }
