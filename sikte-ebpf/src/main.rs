@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+mod common;
 mod perf_events;
 mod raw_trace_points;
 mod trace_points;

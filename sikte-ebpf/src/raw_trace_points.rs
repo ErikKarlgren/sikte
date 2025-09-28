@@ -3,22 +3,18 @@ use aya_ebpf::{
     cty::c_long,
     helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns},
     macros::{map, raw_tracepoint},
-    maps::{HashMap, RingBuf},
+    maps::RingBuf,
     programs::RawTracePointContext,
 };
 use aya_log_ebpf::warn;
-use sikte_common::{
-    generic_types::Unused,
-    raw_tracepoints::syscalls::{
-        MAX_SYSCALL_EVENTS, NUM_ALLOWED_PIDS, PidT, SyscallData, SyscallState,
-    },
+use sikte_common::raw_tracepoints::syscalls::{
+    MAX_SYSCALL_EVENTS, PidT, SyscallData, SyscallState,
 };
+
+use crate::common::PID_ALLOW_LIST;
 
 #[map]
 static SYSCALL_EVENTS: RingBuf = RingBuf::with_byte_size(MAX_SYSCALL_EVENTS, 0);
-
-#[map]
-static PID_ALLOW_LIST: HashMap<PidT, Unused> = HashMap::with_max_entries(NUM_ALLOWED_PIDS, 0);
 
 #[raw_tracepoint(tracepoint = "sys_enter")]
 pub fn sikte_raw_trace_point_at_enter(ctx: RawTracePointContext) -> u32 {
