@@ -1,5 +1,5 @@
 mod event_subscriber;
-mod shell_reader;
+mod shell;
 
 pub use event_subscriber::EventSubscriber;
-pub use shell_reader::ShellReader;
+pub use shell::ShellSubscriber;
