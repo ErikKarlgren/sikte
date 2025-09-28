@@ -7,3 +7,7 @@ use sikte_common::{
 #[map]
 /// PID or TGID allowlist. No processes outside this map will be considered
 pub static PID_ALLOW_LIST: HashMap<PidT, Unused> = HashMap::with_max_entries(NUM_ALLOWED_PIDS, 0);
+
+pub fn is_tgid_in_allowlist(tgid: PidT) -> bool {
+    unsafe { PID_ALLOW_LIST.get(&tgid).is_some() }
+}

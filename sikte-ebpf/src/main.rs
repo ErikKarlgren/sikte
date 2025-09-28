@@ -4,6 +4,7 @@
 mod common;
 mod perf_events;
 mod raw_trace_points;
+mod sched_process_fork;
 mod trace_points;
 
 #[cfg(not(test))]
