@@ -4,6 +4,11 @@ mod events;
 mod publishers;
 mod subscribers;
 
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+
 use anyhow::anyhow;
 use cli::args::*;
 use ebpf::SikteEbpf;
@@ -11,11 +16,7 @@ use events::EventBus;
 use itertools::Itertools;
 use libc::pid_t;
 use log::{debug, info, warn};
-use publishers::syscalls::{self, Requirements, SyscallPublisher};
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
-};
+use publishers::syscalls::{self, SyscallPublisher};
 use subscribers::ShellSubscriber;
 use tokio::{process::Command, signal};
 

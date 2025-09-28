@@ -1,15 +1,15 @@
-use std::{borrow::Borrow, fmt::Debug};
+use std::fmt::Debug;
 
-use super::{error::EbpfError, map_types::*};
 use aya::{
     Ebpf,
-    maps::{Array, HashMap, MapData, RingBuf},
+    maps::{HashMap, RingBuf},
     programs::{PerfEvent, Program, ProgramError, RawTracePoint, TracePoint},
 };
 use aya_log::EbpfLogger;
-use libc::pid_t;
 use log::debug;
 use sikte_common::constants::{attach_points::*, program_names::*};
+
+use super::{error::EbpfError, map_types::*};
 
 /// Central point for interacting with eBPF from user space
 pub struct SikteEbpf {
@@ -96,7 +96,7 @@ impl SikteEbpf {
         let program = self.ebpf.program_mut(name).expect("program exists");
         program
             .try_into()
-            .expect(format!("program can be converted to {}", stringify!(T)).as_str())
+            .unwrap_or_else(|_| panic!("program can be converted to {}", stringify!(T)))
     }
 
     /// Take the syscalls ring buffer
