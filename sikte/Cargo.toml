@@ -26,6 +26,7 @@ tokio = { workspace = true, features = [
     "signal",
     "sync",
 ] }
+thiserror = { workspace = true }
 
 [build-dependencies]
 anyhow = { workspace = true }
