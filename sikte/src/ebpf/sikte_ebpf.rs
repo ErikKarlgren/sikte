@@ -45,14 +45,6 @@ impl SikteEbpf {
         Ok(program)
     }
 
-    /// Load trace points program. The user chooses what to attach it to.
-    pub fn load_tracepoints_program(&mut self) -> Result<&mut TracePoint, ProgramError> {
-        let program = self.get_program::<TracePoint>(SIKTE_TRACE_POINTS);
-        debug!("Loading trace points program");
-        program.load()?;
-        Ok(program)
-    }
-
     /// Load raw tracepoints program for sys_enter
     pub fn attach_sys_enter_program(&mut self) -> Result<SysEnterProgram, EbpfError> {
         let program = self.get_program::<RawTracePoint>(SIKTE_RAW_TRACE_POINT_AT_ENTER);
