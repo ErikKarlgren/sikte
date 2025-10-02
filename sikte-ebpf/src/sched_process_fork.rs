@@ -1,13 +1,13 @@
 use aya_ebpf::{
     EbpfContext,
     macros::{map, tracepoint},
-    maps::RingBuf,
+    maps::{Array, RingBuf},
     programs::TracePointContext,
 };
 use aya_log_ebpf::warn;
 use sikte_common::{
     raw_tracepoints::syscalls::PidT,
-    sched_process_fork::{MAX_SCHED_PROCESS_FORK_EVENTS, SchedProcessForkData},
+    sched_process_fork::{MAX_SCHED_PROCESS_EVENTS, SchedProcessForkData},
 };
 
 use crate::common::{is_tgid_in_allowlist, submit_or_else};
@@ -35,10 +35,14 @@ struct SchedProcessFork {
 }
 
 #[map]
-static SCHED_PROCESS_FORK_EVENTS: RingBuf =
-    RingBuf::with_byte_size(MAX_SCHED_PROCESS_FORK_EVENTS, 0);
+/// Ringbuf for sending new fork events to userspace
+static SCHED_PROCESS_EVENTS: RingBuf = RingBuf::with_byte_size(MAX_SCHED_PROCESS_EVENTS, 0);
 
-// TODO: add a system to signal from sikte that we want to track its next forked child
+#[map]
+/// Variable which will contain sikte's PID when it wishes to have its own next fork tracked and
+/// added to the PID allowlist. When this fork is done, this variable is emptied by kernelspace.
+/// Userspace is expected to set this variable each time just before launching a new process or command.
+static SCHED_PROCESS_TRACK_SIKTE_NEXT_FORK: Array<PidT> = Array::with_max_entries(1, 0);
 
 // TODO: modify the pid allow list, but only if configured this way from userspace (might be
 // default behaviour? or not to avoid unwanted noise by default?)
@@ -55,7 +59,7 @@ fn try_sched_process_fork(ctx: TracePointContext) -> Result<u32, u32> {
     let event = ctx.as_ptr() as *const SchedProcessFork;
 
     let parent_pid = unsafe { (*event).parent_pid };
-    if !is_tgid_in_allowlist(parent_pid) {
+    if !is_tgid_in_allowlist(parent_pid) && !is_siktes_new_fork(parent_pid) {
         return Ok(0);
     }
 
@@ -65,7 +69,7 @@ fn try_sched_process_fork(ctx: TracePointContext) -> Result<u32, u32> {
         child_pid,
     };
 
-    submit_or_else(&SCHED_PROCESS_FORK_EVENTS, data, || {
+    submit_or_else(&SCHED_PROCESS_EVENTS, data, || {
         warn!(
             &ctx,
             "Dropped sched_process_fork data where parent pid is {} and child pid {}",
@@ -73,4 +77,11 @@ fn try_sched_process_fork(ctx: TracePointContext) -> Result<u32, u32> {
             child_pid
         );
     })
+}
+
+fn is_siktes_new_fork(parent_pid: PidT) -> bool {
+    match SCHED_PROCESS_TRACK_SIKTE_NEXT_FORK.get(0) {
+        Some(sikte_pid) => *sikte_pid == parent_pid,
+        None => false,
+    }
 }

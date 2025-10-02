@@ -5,4 +5,4 @@ pub struct SchedProcessForkData {
     pub child_pid: PidT,
 }
 
-pub const MAX_SCHED_PROCESS_FORK_EVENTS: u32 = 1 << 10;
+pub const MAX_SCHED_PROCESS_EVENTS: u32 = 1 << 10;
