@@ -1,16 +1,19 @@
 use aya_ebpf::{
     EbpfContext,
     macros::{map, tracepoint},
-    maps::{Array, RingBuf},
+    maps::Array,
     programs::TracePointContext,
 };
 use aya_log_ebpf::{error, warn};
 use sikte_common::{
     raw_tracepoints::syscalls::PidT,
-    sched_process_fork::{MAX_SCHED_PROCESS_EVENTS, SchedProcessForkData},
+    sched_process_fork::{SchedProcessData, SchedProcessForkData},
 };
 
-use crate::common::{insert_tgid_in_allowlist, is_tgid_in_allowlist, submit_or_else};
+use crate::{
+    common::{insert_tgid_in_allowlist, is_tgid_in_allowlist, submit_or_else},
+    sched_process::maps::SCHED_PROCESS_EVENTS,
+};
 
 /*
 name: sched_process_fork
@@ -35,10 +38,6 @@ struct SchedProcessFork {
 }
 
 #[map]
-/// Ringbuf for sending new fork events to userspace
-static SCHED_PROCESS_EVENTS: RingBuf = RingBuf::with_byte_size(MAX_SCHED_PROCESS_EVENTS, 0);
-
-#[map]
 /// Variable which will contain sikte's PID when it wishes to have its own next fork tracked and
 /// added to the PID allowlist. When this fork is done, this variable is emptied by kernelspace.
 /// Userspace is expected to set this variable each time just before launching a new process or command.
@@ -61,15 +60,16 @@ fn try_sched_process_fork(ctx: TracePointContext) -> Result<u32, u32> {
     }
 
     let child_pid = unsafe { (*event).child_pid };
-    let data = SchedProcessForkData {
-        parent_pid,
-        child_pid,
-    };
 
     if let Err(e) = insert_tgid_in_allowlist(child_pid) {
         error!(&ctx, "Error while inserting TGID {}: {}", child_pid, e);
         return Err(1);
     }
+
+    let data = SchedProcessData::Fork(SchedProcessForkData {
+        parent_pid,
+        child_pid,
+    });
 
     submit_or_else(&SCHED_PROCESS_EVENTS, data, || {
         warn!(
