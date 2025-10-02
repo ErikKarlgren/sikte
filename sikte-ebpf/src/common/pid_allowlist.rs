@@ -16,3 +16,13 @@ pub static PID_ALLOW_LIST: HashMap<PidT, Unused> =
 pub fn is_tgid_in_allowlist(tgid: PidT) -> bool {
     unsafe { PID_ALLOW_LIST.get(&tgid).is_some() }
 }
+
+/// Insert a TGID in allowlist
+pub fn insert_tgid_in_allowlist(tgid: PidT) -> Result<(), i64> {
+    PID_ALLOW_LIST.insert(&tgid, &0, 0)
+}
+
+/// Remove a TGID from allowlist
+pub fn remove_tgid_from_allowlist(tgid: PidT) -> Result<(), i64> {
+    PID_ALLOW_LIST.remove(&tgid)
+}
