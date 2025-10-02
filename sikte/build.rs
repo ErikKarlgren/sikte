@@ -6,11 +6,9 @@ fn main() -> anyhow::Result<()> {
         .no_deps()
         .exec()
         .context("MetadataCommand::exec")?;
-
     let ebpf_package = packages
         .into_iter()
-        .find(|cargo_metadata::Package { name, .. }| *name == "sikte-ebpf")
+        .find(|cargo_metadata::Package { name, .. }| name == "sikte-ebpf")
         .ok_or_else(|| anyhow!("sikte-ebpf package not found"))?;
-
-    aya_build::build_ebpf([ebpf_package], aya_build::Toolchain::Nightly)
+    aya_build::build_ebpf([ebpf_package])
 }
