@@ -4,13 +4,13 @@ use aya_ebpf::{
     maps::{Array, RingBuf},
     programs::TracePointContext,
 };
-use aya_log_ebpf::warn;
+use aya_log_ebpf::{error, warn};
 use sikte_common::{
     raw_tracepoints::syscalls::PidT,
     sched_process_fork::{MAX_SCHED_PROCESS_EVENTS, SchedProcessForkData},
 };
 
-use crate::common::{is_tgid_in_allowlist, submit_or_else};
+use crate::common::{insert_tgid_in_allowlist, is_tgid_in_allowlist, submit_or_else};
 
 /*
 name: sched_process_fork
@@ -44,9 +44,6 @@ static SCHED_PROCESS_EVENTS: RingBuf = RingBuf::with_byte_size(MAX_SCHED_PROCESS
 /// Userspace is expected to set this variable each time just before launching a new process or command.
 static SCHED_PROCESS_TRACK_SIKTE_NEXT_FORK: Array<PidT> = Array::with_max_entries(1, 0);
 
-// TODO: modify the pid allow list, but only if configured this way from userspace (might be
-// default behaviour? or not to avoid unwanted noise by default?)
-
 #[tracepoint]
 pub fn sikte_sched_process_fork(ctx: TracePointContext) -> u32 {
     match try_sched_process_fork(ctx) {
@@ -68,6 +65,11 @@ fn try_sched_process_fork(ctx: TracePointContext) -> Result<u32, u32> {
         parent_pid,
         child_pid,
     };
+
+    if let Err(e) = insert_tgid_in_allowlist(child_pid) {
+        error!(&ctx, "Error while inserting TGID {}: {}", child_pid, e);
+        return Err(1);
+    }
 
     submit_or_else(&SCHED_PROCESS_EVENTS, data, || {
         warn!(
