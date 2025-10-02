@@ -35,6 +35,7 @@ impl EventBus {
     where
         P: EventPublisher + Send + 'static,
     {
+        debug!("Spawn publishment: {}", publisher.get_name());
         let tx = self.sender.clone();
         let handle = tokio::spawn(publishment(publisher, tx));
         self.join_handles.push(handle);
@@ -45,6 +46,7 @@ impl EventBus {
     where
         S: EventSubscriber + Send + 'static,
     {
+        debug!("Spawn subscription: {}", subscriber.get_name());
         let rx = self.sender.subscribe();
         let handle = tokio::spawn(subscription(subscriber, rx));
         self.join_handles.push(handle);
@@ -66,7 +68,7 @@ where
     loop {
         let num_events = publisher.publish_events(&tx).await;
         if let Err(err) = num_events {
-            error!("Error while publishing: {err}");
+            error!("Error with publisher {}: {err}", publisher.get_name());
         }
     }
 }

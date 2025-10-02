@@ -31,7 +31,7 @@ async fn main() -> anyhow::Result<()> {
     let mut ebpf = SikteEbpf::load()?;
     if let Err(e) = ebpf.init_logger() {
         // This can happen if you remove all log statements from your eBPF program.
-        warn!("failed to initialize eBPF logger: {e}");
+        warn!("Failed to initialize eBPF logger: {e}");
     }
 
     let interrupted = Arc::new(AtomicBool::new(false));
