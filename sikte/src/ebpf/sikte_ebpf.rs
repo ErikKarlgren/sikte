@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use aya::{
     Ebpf,
     maps::{HashMap, RingBuf},
-    programs::{PerfEvent, Program, ProgramError, RawTracePoint, TracePoint},
+    programs::{PerfEvent, Program, RawTracePoint},
 };
 use aya_log::EbpfLogger;
 use log::debug;

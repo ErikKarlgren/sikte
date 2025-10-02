@@ -11,7 +11,7 @@ use sikte_common::raw_tracepoints::syscalls::{
     MAX_SYSCALL_EVENTS, PidT, SyscallData, SyscallState,
 };
 
-use crate::common::{PID_ALLOW_LIST, is_tgid_in_allowlist, submit_or_else};
+use crate::common::{is_tgid_in_allowlist, submit_or_else};
 
 #[map]
 static SYSCALL_EVENTS: RingBuf = RingBuf::with_byte_size(MAX_SYSCALL_EVENTS, 0);
