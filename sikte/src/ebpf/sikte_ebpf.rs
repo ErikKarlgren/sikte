@@ -6,7 +6,7 @@ use aya::{
     programs::{PerfEvent, Program, ProgramError, RawTracePoint, TracePoint},
 };
 use aya_log::EbpfLogger;
-use log::debug;
+use log::{Log, debug};
 use sikte_common::constants::{attach_points::*, program_names::*};
 
 use super::{error::EbpfError, map_types::*};
@@ -31,7 +31,7 @@ impl SikteEbpf {
     }
 
     /// Init logger for eBPF programs
-    pub fn init_logger(&mut self) -> Result<EbpfLogger, aya_log::Error> {
+    pub fn init_logger(&mut self) -> Result<EbpfLogger<&'static dyn Log>, aya_log::Error> {
         aya_log::EbpfLogger::init(&mut self.ebpf)
     }
 
