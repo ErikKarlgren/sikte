@@ -1,5 +1,16 @@
 # sikte
 
+sikte is meant to become a "microscopic" performance tracer to investigate a program's performance with rich web-based timeline reports.
+
+## Roadmap
+
+sikte will have the following features as development goes on:
+
+- [ ] Syscall tracing
+- [ ] Perf events tracing (cache misses, branch mispredictions, idle cpu time, ...)
+- [ ] Web-based reports with a timeline view
+- [ ] Dynamic flamegraph support
+
 ## Prerequisites
 
 1. stable rust toolchains: `rustup toolchain install stable`
@@ -34,7 +45,6 @@ copied to a Linux server or VM and run there.
 
 ## License
 
-All code is distributed under the terms of the [GNU General Public License, 
-Version 2].
+All code is distributed under the terms of the [GNU General Public License, Version 2].
 
 [GNU General Public License, Version 2]: LICENSE
