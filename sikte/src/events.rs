@@ -23,7 +23,8 @@ pub struct EventBus {
 impl EventBus {
     /// Create a new `EventBus`
     pub fn new() -> EventBus {
-        let (sender, _) = tokio::sync::broadcast::channel(1024);
+        const CAPACITY: usize = 2 << 15;
+        let (sender, _) = tokio::sync::broadcast::channel(CAPACITY);
         EventBus {
             sender,
             join_handles: vec![],
