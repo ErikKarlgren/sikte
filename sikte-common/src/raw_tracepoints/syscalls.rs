@@ -21,9 +21,6 @@ pub struct SyscallData {
     pub state: SyscallState,
 }
 
-/// Maximum number of allowed PIDs that the eBPF raw tracepoints program may trace
-pub const NUM_ALLOWED_PIDS: u32 = 1 << 10;
-
 /// Maximum number of syscall events (sys_enter and sys_exit) until these will start being
 /// discarded
 pub const MAX_SYSCALL_EVENTS: u32 = 1 << 20;

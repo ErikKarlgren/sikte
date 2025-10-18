@@ -1,8 +1,8 @@
 use aya_ebpf::{bindings::BPF_F_NO_PREALLOC, macros::map, maps::HashMap};
-use sikte_common::{
-    generic_types::Unused,
-    raw_tracepoints::syscalls::{NUM_ALLOWED_PIDS, PidT},
-};
+use sikte_common::{generic_types::Unused, raw_tracepoints::syscalls::PidT};
+
+/// Maximum number of allowed PIDs that the eBPF raw tracepoints program may trace
+pub const NUM_ALLOWED_PIDS: u32 = 1 << 15;
 
 #[map]
 /// PID or TGID allowlist. No processes outside this map will be considered. It uses
