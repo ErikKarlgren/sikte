@@ -44,8 +44,12 @@ async fn main() -> anyhow::Result<()> {
             if options.syscalls {
                 let sys_enter = ebpf.attach_sys_enter_program()?;
                 let sys_exit = ebpf.attach_sys_exit_program()?;
-                let requirements = syscalls::Requirements::new(sys_enter, sys_exit);
+                let sched_fork = ebpf.attach_sched_process_fork_program()?;
+                let sched_exit = ebpf.attach_sched_process_exit_program()?;
+                let requirements =
+                    syscalls::Requirements::new(sys_enter, sys_exit, sched_fork, sched_exit);
 
+                // TODO: read child processes from /proc
                 let mut pid_allow_list = ebpf.pid_allow_list_mut();
                 add_pids_to_allowlist(target, &mut pid_allow_list).await?;
 

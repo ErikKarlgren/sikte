@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use aya::{
     Ebpf,
     maps::{HashMap, RingBuf},
-    programs::{PerfEvent, Program, RawTracePoint},
+    programs::{PerfEvent, Program, RawTracePoint, TracePoint},
 };
 use aya_log::EbpfLogger;
 use log::debug;
@@ -78,6 +78,40 @@ impl SikteEbpf {
         Ok(SysExitProgram { _private: () })
     }
 
+    pub fn attach_sched_process_fork_program(
+        &mut self,
+    ) -> Result<SchedProcessForkProgram, EbpfError> {
+        let program = self.get_program::<TracePoint>(SIKTE_SCHED_PROCESS_FORK);
+        debug!("Loading {SCHED_PROCESS_FORK} program");
+        program
+            .load()
+            .map_err(|e| EbpfError::as_load_error(e, SIKTE_SCHED_PROCESS_FORK))?;
+
+        debug!("Attaching to {SCHED_PROCESS_FORK}");
+        program.attach("sched", SCHED_PROCESS_FORK).map_err(|e| {
+            EbpfError::as_attach_error(e, SIKTE_SCHED_PROCESS_FORK, SCHED_PROCESS_FORK)
+        })?;
+
+        Ok(SchedProcessForkProgram { _private: () })
+    }
+
+    pub fn attach_sched_process_exit_program(
+        &mut self,
+    ) -> Result<SchedProcessExitProgram, EbpfError> {
+        let program = self.get_program::<TracePoint>(SIKTE_SCHED_PROCESS_EXIT);
+        debug!("Loading {SCHED_PROCESS_EXIT} program");
+        program
+            .load()
+            .map_err(|e| EbpfError::as_load_error(e, SIKTE_SCHED_PROCESS_EXIT))?;
+
+        debug!("Attaching to {SCHED_PROCESS_EXIT}");
+        program.attach("sched", SCHED_PROCESS_EXIT).map_err(|e| {
+            EbpfError::as_attach_error(e, SIKTE_SCHED_PROCESS_EXIT, SCHED_PROCESS_EXIT)
+        })?;
+
+        Ok(SchedProcessExitProgram { _private: () })
+    }
+
     /// Retrieves an eBPF program by its name
     fn get_program<'ebpf, T>(&'ebpf mut self, name: &str) -> &'ebpf mut T
     where
@@ -114,6 +148,18 @@ pub struct SysEnterProgram {
 
 /// Represents that the 'sys_exit' program has been loaded into the kernel
 pub struct SysExitProgram {
+    /// Private field. This avoids letting the user create an instance of this type
+    _private: (),
+}
+
+/// Represents that the 'sched_process_fork' program has been loaded into the kernel
+pub struct SchedProcessForkProgram {
+    /// Private field. This avoids letting the user create an instance of this type
+    _private: (),
+}
+
+/// Represents that the 'sched_process_exit' program has been loaded into the kernel
+pub struct SchedProcessExitProgram {
     /// Private field. This avoids letting the user create an instance of this type
     _private: (),
 }

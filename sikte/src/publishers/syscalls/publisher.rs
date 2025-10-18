@@ -7,7 +7,10 @@ use anyhow::anyhow;
 use aya::maps::{MapData, RingBuf};
 use bytemuck::checked;
 use log::error;
-use sikte_common::raw_tracepoints::syscalls::SyscallData;
+use sikte_common::{
+    raw_tracepoints::syscalls::SyscallData,
+    sched_process_fork::{SchedProcessExitData, SchedProcessForkData},
+};
 use tokio::{
     io::{Interest, unix::AsyncFd},
     sync::broadcast::Sender,
@@ -15,7 +18,10 @@ use tokio::{
 };
 
 use crate::{
-    ebpf::{SysEnterProgram, SysExitProgram, map_types::SyscallRingBuf},
+    ebpf::{
+        SchedProcessExitProgram, SchedProcessForkProgram, SysEnterProgram, SysExitProgram,
+        map_types::SyscallRingBuf,
+    },
     events::Event,
     publishers::EventPublisher,
 };
@@ -24,13 +30,22 @@ use crate::{
 pub struct Requirements {
     _sys_enter: SysEnterProgram,
     _sys_exit: SysExitProgram,
+    _sched_process_fork: SchedProcessForkProgram,
+    _sched_process_exit: SchedProcessExitProgram,
 }
 
 impl Requirements {
-    pub fn new(sys_enter: SysEnterProgram, sys_exit: SysExitProgram) -> Requirements {
+    pub fn new(
+        sys_enter: SysEnterProgram,
+        sys_exit: SysExitProgram,
+        sched_process_fork: SchedProcessForkProgram,
+        sched_process_exit: SchedProcessExitProgram,
+    ) -> Requirements {
         Requirements {
             _sys_enter: sys_enter,
             _sys_exit: sys_exit,
+            _sched_process_fork: sched_process_fork,
+            _sched_process_exit: sched_process_exit,
         }
     }
 }
