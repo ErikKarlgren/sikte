@@ -1,5 +1,5 @@
 use aya_ebpf::{EbpfContext, macros::tracepoint, programs::TracePointContext};
-use aya_log_ebpf::{error, warn};
+use aya_log_ebpf::{debug, error, warn};
 use sikte_common::{
     raw_tracepoints::syscalls::PidT,
     sched_process_fork::{SchedProcessData, SchedProcessExitData},
@@ -51,6 +51,7 @@ fn try_sched_process_exit(ctx: TracePointContext) -> Result<u32, u32> {
         error!(&ctx, "Error while removing TGID {}: {}", pid, e);
         return Err(1);
     }
+    debug!(&ctx, "No longer tracking dead process {}", pid);
 
     let data = SchedProcessData::Exit(SchedProcessExitData { pid });
 

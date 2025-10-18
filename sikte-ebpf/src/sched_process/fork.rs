@@ -4,7 +4,7 @@ use aya_ebpf::{
     maps::Array,
     programs::TracePointContext,
 };
-use aya_log_ebpf::{error, warn};
+use aya_log_ebpf::{debug, error, warn};
 use sikte_common::{
     raw_tracepoints::syscalls::PidT,
     sched_process_fork::{SchedProcessData, SchedProcessForkData},
@@ -65,6 +65,7 @@ fn try_sched_process_fork(ctx: TracePointContext) -> Result<u32, u32> {
         error!(&ctx, "Error while inserting TGID {}: {}", child_pid, e);
         return Err(1);
     }
+    debug!(&ctx, "Tracking new process {}", child_pid);
 
     let data = SchedProcessData::Fork(SchedProcessForkData {
         parent_pid,
