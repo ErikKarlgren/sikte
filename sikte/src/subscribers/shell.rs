@@ -25,7 +25,7 @@ impl ShellSubscriber {
 
 impl ShellSubscriber {
     fn show_summary(&self) {
-        println!("Spent time on syscalls: {} us", self.total_syscalls_time);
+        println!("Spent time on syscalls: {:.2} us", self.total_syscalls_time);
     }
 }
 
