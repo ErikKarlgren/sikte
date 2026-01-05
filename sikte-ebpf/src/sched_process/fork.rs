@@ -1,5 +1,6 @@
 use aya_ebpf::{
     EbpfContext,
+    helpers::bpf_probe_read_kernel,
     macros::{map, tracepoint},
     maps::Array,
     programs::TracePointContext,
@@ -12,6 +13,7 @@ use sikte_common::{
 
 use crate::{
     common::{insert_tgid_in_allowlist, is_tgid_in_allowlist, submit_or_else},
+    read_field,
     sched_process::maps::SCHED_PROCESS_EVENTS,
 };
 
@@ -33,7 +35,9 @@ print fmt: "comm=%s pid=%d child_comm=%s child_pid=%d", __get_str(parent_comm), 
 */
 
 struct SchedProcessFork {
+    parent_comm: *const u8,
     parent_pid: PidT,
+    child_comm: *const u8,
     child_pid: PidT,
 }
 
@@ -47,20 +51,17 @@ static SCHED_PROCESS_TRACK_SIKTE_NEXT_FORK: Array<PidT> = Array::with_max_entrie
 pub fn sikte_sched_process_fork(ctx: TracePointContext) -> u32 {
     match try_sched_process_fork(ctx) {
         Ok(ret) => ret,
-        Err(ret) => ret,
+        Err(ret) => ret as u32,
     }
 }
 
-fn try_sched_process_fork(ctx: TracePointContext) -> Result<u32, u32> {
-    let event = ctx.as_ptr() as *const SchedProcessFork;
-
-    let parent_pid = unsafe { (*event).parent_pid };
+fn try_sched_process_fork(ctx: TracePointContext) -> Result<u32, i64> {
+    let parent_pid: PidT = read_field!(ctx, SchedProcessFork, parent_pid)?;
     if !is_tgid_in_allowlist(parent_pid) && !is_siktes_new_fork(parent_pid) {
         return Ok(0);
     }
 
-    let child_pid = unsafe { (*event).child_pid };
-
+    let child_pid = read_field!(ctx, SchedProcessFork, child_pid)?;
     if let Err(e) = insert_tgid_in_allowlist(child_pid) {
         error!(&ctx, "Error while inserting TGID {}: {}", child_pid, e);
         return Err(1);

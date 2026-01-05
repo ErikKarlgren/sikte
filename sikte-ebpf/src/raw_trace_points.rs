@@ -1,5 +1,6 @@
 use aya_ebpf::{
     EbpfContext, PtRegs,
+    bindings::pt_regs,
     cty::c_long,
     helpers::{bpf_get_current_pid_tgid, bpf_ktime_get_ns},
     macros::{map, raw_tracepoint},
@@ -20,11 +21,11 @@ static SYSCALL_EVENTS: RingBuf = RingBuf::with_byte_size(MAX_SYSCALL_EVENTS, 0);
 pub fn sikte_raw_trace_point_at_enter(ctx: RawTracePointContext) -> u32 {
     match try_sys_enter(ctx) {
         Ok(ret) => ret,
-        Err(ret) => ret,
+        Err(ret) => ret as u32,
     }
 }
 
-pub fn try_sys_enter(ctx: RawTracePointContext) -> Result<u32, u32> {
+pub fn try_sys_enter(ctx: RawTracePointContext) -> Result<u32, i64> {
     let pid_tgid = bpf_get_current_pid_tgid();
     let tgid = (pid_tgid >> 32) as PidT;
 
@@ -36,8 +37,12 @@ pub fn try_sys_enter(ctx: RawTracePointContext) -> Result<u32, u32> {
     let pid = (pid_tgid & (u32::MAX as u64)) as PidT;
 
     // https://elixir.bootlin.com/linux/v6.16/source/include/trace/events/syscalls.h#L20
-    let event = ctx.as_ptr() as *const (*const PtRegs, c_long);
-    let syscall_id = unsafe { (*event).1 };
+    let event = ctx.as_ptr() as *const (PtRegs, c_long);
+    let regs: PtRegs = unsafe { (*event).0 };
+    let syscall_id = regs.arg(0);
+    let regs: *const PtRegs;
+
+    let args = ctx as *const aya_ebpf::
 
     let data = SyscallData {
         timestamp,
@@ -58,11 +63,11 @@ pub fn try_sys_enter(ctx: RawTracePointContext) -> Result<u32, u32> {
 pub fn sikte_raw_trace_point_at_exit(ctx: RawTracePointContext) -> u32 {
     match try_sys_exit(ctx) {
         Ok(ret) => ret,
-        Err(ret) => ret,
+        Err(ret) => ret as u32,
     }
 }
 
-pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, u32> {
+pub fn try_sys_exit(ctx: RawTracePointContext) -> Result<u32, i64> {
     let pid_tgid = bpf_get_current_pid_tgid();
     let tgid = (pid_tgid >> 32) as PidT;
 

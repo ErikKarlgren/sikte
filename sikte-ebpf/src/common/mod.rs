@@ -1,3 +1,4 @@
+mod macros;
 mod pid_allowlist;
 mod ringbufs;
 

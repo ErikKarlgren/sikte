@@ -7,6 +7,7 @@ use sikte_common::{
 
 use crate::{
     common::{is_tgid_in_allowlist, remove_tgid_from_allowlist, submit_or_else},
+    read_field,
     sched_process::maps::SCHED_PROCESS_EVENTS,
 };
 
@@ -28,6 +29,7 @@ print fmt: "comm=%s pid=%d prio=%d group_dead=%s", REC->comm, REC->pid, REC->pri
 */
 
 struct SchedProcessExit {
+    comm: *const u8,
     pid: PidT,
 }
 
@@ -35,14 +37,12 @@ struct SchedProcessExit {
 pub fn sikte_sched_process_exit(ctx: TracePointContext) -> u32 {
     match try_sched_process_exit(ctx) {
         Ok(ret) => ret,
-        Err(ret) => ret,
+        Err(ret) => ret as u32,
     }
 }
 
-fn try_sched_process_exit(ctx: TracePointContext) -> Result<u32, u32> {
-    let event = ctx.as_ptr() as *const SchedProcessExit;
-
-    let pid = unsafe { (*event).pid };
+fn try_sched_process_exit(ctx: TracePointContext) -> Result<u32, i64> {
+    let pid = read_field!(ctx, SchedProcessExit, pid)?;
     if !is_tgid_in_allowlist(pid) {
         return Ok(0);
     }
