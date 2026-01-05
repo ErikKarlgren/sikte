@@ -1,9 +1,7 @@
 #![no_std]
 #![no_main]
 
-mod perf_events;
 mod raw_trace_points;
-mod trace_points;
 
 #[cfg(not(test))]
 #[panic_handler]
