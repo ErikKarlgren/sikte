@@ -3,15 +3,11 @@ name = "sikte-ebpf"
 version = "0.1.0"
 edition.workspace = true
 
-[dependencies]
-sikte-common = { path = "../sikte-common" }
+# C eBPF programs don't need Rust dependencies
+# Compilation handled by libbpf-cargo in sikte/build.rs
 
-aya-ebpf = { workspace = true }
-aya-log-ebpf = { workspace = true }
+[dependencies]
+# No dependencies needed for C eBPF code
 
 [build-dependencies]
-which = { workspace = true }
-
-[[bin]]
-name = "sikte"
-path = "src/main.rs"
+# No build dependencies needed

@@ -15,12 +15,12 @@ use ebpf::SikteEbpf;
 use events::EventBus;
 use itertools::Itertools;
 use libc::pid_t;
-use log::{debug, info, warn};
+use log::{debug, info};
 use publishers::syscalls::{self, SyscallPublisher};
 use subscribers::ShellSubscriber;
 use tokio::{process::Command, signal};
 
-use crate::{ebpf::map_types::PidAllowList, publishers::perf_events};
+use crate::ebpf::map_types::{PidAllowList, SyscallRingBuf};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -29,10 +29,6 @@ async fn main() -> anyhow::Result<()> {
     bump_memlock_rlimit();
 
     let mut ebpf = SikteEbpf::load()?;
-    if let Err(e) = ebpf.init_logger() {
-        // This can happen if you remove all log statements from your eBPF program.
-        warn!("failed to initialize eBPF logger: {e}");
-    }
 
     let interrupted = Arc::new(AtomicBool::new(false));
 
@@ -46,15 +42,14 @@ async fn main() -> anyhow::Result<()> {
                 let sys_exit = ebpf.attach_sys_exit_program()?;
                 let requirements = syscalls::Requirements::new(sys_enter, sys_exit);
 
-                let mut pid_allow_list = ebpf.pid_allow_list_mut();
-                add_pids_to_allowlist(target, &mut pid_allow_list).await?;
+                let pid_allow_list = PidAllowList::new(ebpf.pid_allow_list_map());
+                add_pids_to_allowlist(target, &pid_allow_list).await?;
 
-                let ring_buf = ebpf.take_syscalls_ringbuf();
-                let publisher = SyscallPublisher::new(requirements, ring_buf, interrupted.clone())?;
+                let ring_buf = SyscallRingBuf::new(ebpf.syscall_events_map());
+                let tx = event_bus.tx();
+                let publisher =
+                    SyscallPublisher::new(requirements, ring_buf, interrupted.clone(), tx)?;
                 event_bus.spawn_publishment(publisher);
-            }
-            if options.perf_events {
-                perf_events(ebpf)?;
             }
         }
     }
@@ -89,7 +84,7 @@ fn bump_memlock_rlimit() {
 
 async fn add_pids_to_allowlist(
     target: TargetArgs,
-    pid_allow_list: &mut PidAllowList<'_>,
+    pid_allow_list: &PidAllowList<'_>,
 ) -> anyhow::Result<()> {
     match target.to_target() {
         Target::Pid(pids) => {

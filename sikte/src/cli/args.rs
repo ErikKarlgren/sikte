@@ -3,7 +3,7 @@ use log::debug;
 
 #[derive(Debug, Parser)]
 #[command(name = "sikte")]
-#[command(about = "A tracing tool for syscalls and perf events")]
+#[command(about = "A tracing tool for syscalls")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -15,18 +15,14 @@ impl Cli {
         let args = Cli::parse();
 
         if let Commands::Record(RecordArgs {
-            options:
-                TracingOptions {
-                    syscalls: false,
-                    perf_events: false,
-                },
+            options: TracingOptions { syscalls: false },
             ..
         }) = args.command
         {
             Cli::command()
                 .error(
                     clap::error::ErrorKind::TooFewValues,
-                    "You need to set what to trace!",
+                    "You need to set --syscalls to trace!",
                 )
                 .exit();
         }
@@ -85,8 +81,4 @@ pub struct TracingOptions {
     /// Trace syscalls
     #[arg(long)]
     pub syscalls: bool,
-
-    /// Trace perf events
-    #[arg(long)]
-    pub perf_events: bool,
 }

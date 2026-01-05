@@ -2,17 +2,13 @@ use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
+use std::time::Duration;
 
 use anyhow::anyhow;
-use aya::maps::{MapData, RingBuf};
 use bytemuck::checked;
-use log::error;
+use log::{error, warn};
 use sikte_common::raw_tracepoints::syscalls::SyscallData;
-use tokio::{
-    io::{Interest, unix::AsyncFd},
-    sync::broadcast::Sender,
-    task::yield_now,
-};
+use tokio::sync::broadcast::Sender;
 
 use crate::{
     ebpf::{SysEnterProgram, SysExitProgram, map_types::SyscallRingBuf},
@@ -36,80 +32,73 @@ impl Requirements {
 }
 
 /// Publishes syscall data to an EventBus
-// pub struct SyscallPublisher<T: IsRingBufData> {
 pub struct SyscallPublisher {
-    /// Requirements for creating this struct. These are just capability tokens, so not actually
-    /// used
+    /// Requirements for creating this struct. These are just capability tokens
     _requirements: Requirements,
-    /// Syscall ring buffer
-    // ring_buf_fd: AsyncFd<RingBuf<T>>,
-    ring_buf_fd: AsyncFd<RingBuf<MapData>>,
+    /// Ring buffer for polling
+    ring_buffer: libbpf_rs::RingBuffer<'static>,
     /// Boolean that tells us if the user interrupted the program
     interrupted: Arc<AtomicBool>,
 }
 
-// impl<T: IsRingBufData> SyscallPublisher<T> {
 impl SyscallPublisher {
-    /// Create new SyscallPublisher, but only if the user already has the given requirements, which
-    /// must be given by `SikteEbpf`. It might fail if a file descriptor cannot be open for the ring
-    /// buffer.
+    /// Create new SyscallPublisher with libbpf-rs RingBuffer callback pattern
     pub fn new(
         requirements: Requirements,
         ring_buf: SyscallRingBuf,
         interrupted: Arc<AtomicBool>,
-    ) -> std::io::Result<SyscallPublisher> {
-        let ring_buf_fd = AsyncFd::with_interest(ring_buf.0, Interest::READABLE)?;
+        tx: Sender<Event>,
+    ) -> Result<SyscallPublisher, libbpf_rs::Error> {
+        // Create ring buffer with callback
+        let mut builder = libbpf_rs::RingBufferBuilder::new();
+
+        builder.add(ring_buf.map(), move |data: &[u8]| -> i32 {
+            // Parse syscall data
+            match checked::try_from_bytes::<SyscallData>(data) {
+                Ok(syscall_data) => {
+                    // Send to event bus
+                    if let Err(e) = tx.send(Event::Syscall(*syscall_data)) {
+                        error!("Failed to send syscall event: {}", e);
+                        return -1;
+                    }
+                    0
+                }
+                Err(e) => {
+                    warn!("Failed to parse syscall data: {:?}", e);
+                    -1
+                }
+            }
+        })?;
+
+        let ring_buffer = builder.build()?;
+
         Ok(SyscallPublisher {
             _requirements: requirements,
-            ring_buf_fd,
+            ring_buffer,
             interrupted,
         })
     }
 }
 
-// impl<T: IsRingBufData> EventPublisher for SyscallPublisher<T> {
 impl EventPublisher for SyscallPublisher {
     fn get_name(&self) -> &str {
         "Syscall"
     }
 
-    async fn publish_events(&mut self, tx: &Sender<Event>) -> anyhow::Result<u32> {
-        const YIELD_LIMIT: u32 = 1000;
-
-        let mut num_events = 0u32;
-        let mut guard = self.ring_buf_fd.readable_mut().await?;
-
-        let ring_buf = guard.get_inner_mut();
-
+    async fn publish_events(&mut self, _tx: &Sender<Event>) -> anyhow::Result<u32> {
+        // Check for interruption
         if self.interrupted.load(Ordering::Acquire) {
             return Err(anyhow!("Interrupted by user"));
         }
 
-        while let Some(item) = ring_buf.next() {
-            num_events += 1;
+        // Poll ring buffer in a blocking task
+        // The callback registered in new() will send events
+        let rb = &mut self.ring_buffer;
+        let result = tokio::task::block_in_place(|| rb.poll(Duration::from_millis(100)));
 
-            let raw_data: &[u8] = &item;
-            let syscall_data = checked::try_from_bytes::<SyscallData>(raw_data)
-                .map_err(|err| anyhow!("Could not parse SyscallData: {err:?}"))?;
-
-            if let Err(e) = tx.send(Event::Syscall(*syscall_data)) {
-                error!("Could not send event: {e}");
-                // There might not be any subscribers ready yet
-                yield_now().await;
-            }
-
-            // Check periodically if program has been interrupted. Otherwise, yield to not hog
-            // up tokio's resources.
-            if num_events % YIELD_LIMIT == 0 {
-                if self.interrupted.load(Ordering::Acquire) {
-                    return Err(anyhow!("Interrupted by user"));
-                } else {
-                    yield_now().await;
-                }
-            }
+        match result {
+            Ok(_) => Ok(0), // Event count tracked in callback
+            Err(e) => Err(anyhow!("Ring buffer poll error: {}", e)),
         }
-
-        guard.clear_ready();
-        Ok(num_events)
     }
 }

@@ -1,116 +1,94 @@
-use std::fmt::Debug;
+use std::mem::MaybeUninit;
 
-use aya::{
-    Ebpf,
-    maps::{HashMap, RingBuf},
-    programs::{PerfEvent, Program, ProgramError, RawTracePoint, TracePoint},
-};
-use aya_log::EbpfLogger;
+use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
 use log::debug;
 use sikte_common::constants::{attach_points::*, program_names::*};
 
-use super::{error::EbpfError, map_types::*};
+use super::error::EbpfError;
+
+// Include generated skeleton
+mod sikte_skel {
+    include!(concat!(env!("OUT_DIR"), "/sikte.skel.rs"));
+}
+
+use sikte_skel::*;
 
 /// Central point for interacting with eBPF from user space
 pub struct SikteEbpf {
-    ebpf: Ebpf,
+    skel: RawTracePointsSkel<'static>,
 }
 
 impl SikteEbpf {
-    /// Load eBPF binary
-    pub fn load() -> Result<SikteEbpf, aya::EbpfError> {
-        // This will include your eBPF object file as raw bytes at compile-time and load it at
-        // runtime. This approach is recommended for most real-world use cases. If you would
-        // like to specify the eBPF program at runtime rather than at compile-time, you can
-        // reach for `Bpf::load_file` instead.
-        let ebpf = aya::Ebpf::load(aya::include_bytes_aligned!(concat!(
-            env!("OUT_DIR"),
-            "/sikte"
-        )))?;
-        Ok(SikteEbpf { ebpf })
-    }
+    /// Load eBPF programs with CO-RE support
+    pub fn load() -> Result<SikteEbpf, EbpfError> {
+        debug!("Opening eBPF skeleton");
 
-    /// Init logger for eBPF programs
-    pub fn init_logger(&mut self) -> Result<EbpfLogger, aya_log::Error> {
-        aya_log::EbpfLogger::init(&mut self.ebpf)
-    }
+        // Open skeleton (parses object but doesn't load into kernel)
+        let skel_builder = RawTracePointsSkelBuilder::default();
+        let open_object = Box::leak(Box::new(MaybeUninit::uninit()));
+        let open_skel = skel_builder
+            .open(open_object)
+            .map_err(|e| EbpfError::LoadError {
+                program: "skeleton",
+                source: e,
+            })?;
 
-    /// Load perf events program. The user chooses what to attach it to.
-    pub fn load_perf_events_program(&mut self) -> Result<&mut PerfEvent, EbpfError> {
-        let program = self.get_program::<PerfEvent>(SIKTE_PERF_EVENTS);
-        debug!("Loading perf events program");
-        program
-            .load()
-            .map_err(|e| EbpfError::as_load_error(e, SIKTE_PERF_EVENTS))?;
-        Ok(program)
-    }
+        debug!("Loading eBPF programs into kernel (CO-RE relocations will be applied)");
 
-    /// Load trace points program. The user chooses what to attach it to.
-    pub fn load_tracepoints_program(&mut self) -> Result<&mut TracePoint, ProgramError> {
-        let program = self.get_program::<TracePoint>(SIKTE_TRACE_POINTS);
-        debug!("Loading trace points program");
-        program.load()?;
-        Ok(program)
-    }
-
-    /// Load raw tracepoints program for sys_enter
-    pub fn attach_sys_enter_program(&mut self) -> Result<SysEnterProgram, EbpfError> {
-        let program = self.get_program::<RawTracePoint>(SIKTE_RAW_TRACE_POINT_AT_ENTER);
-
-        debug!("Loading {SYS_ENTER} program");
-        program
-            .load()
-            .map_err(|e| EbpfError::as_load_error(e, SIKTE_RAW_TRACE_POINT_AT_ENTER))?;
-
-        debug!("Attaching to {SYS_ENTER}");
-        program.attach(SYS_ENTER).map_err(|e| {
-            EbpfError::as_attach_error(e, SIKTE_RAW_TRACE_POINT_AT_ENTER, SYS_ENTER)
+        // Load programs into kernel (performs CO-RE relocations)
+        let skel = open_skel.load().map_err(|e| EbpfError::LoadError {
+            program: "skeleton",
+            source: e,
         })?;
 
+        debug!("eBPF programs loaded successfully with CO-RE support");
+
+        Ok(SikteEbpf { skel })
+    }
+
+    /// Attach sys_enter raw tracepoint
+    pub fn attach_sys_enter_program(&mut self) -> Result<SysEnterProgram, EbpfError> {
+        debug!(
+            "Attaching {} program to {}",
+            SIKTE_RAW_TRACE_POINT_AT_ENTER, SYS_ENTER
+        );
+
+        // Attach all programs in skeleton
+        // TODO: For more granular control, could use:
+        // self.skel.progs().sikte_raw_trace_point_at_enter().attach()?
+        self.skel.attach().map_err(|e| EbpfError::AttachError {
+            program: SIKTE_RAW_TRACE_POINT_AT_ENTER,
+            attach_target: SYS_ENTER,
+            source: e,
+        })?;
+
+        debug!("Successfully attached sys_enter program");
         Ok(SysEnterProgram { _private: () })
     }
 
-    /// Load raw tracepoints program for sys_exit
+    /// Attach sys_exit raw tracepoint
     pub fn attach_sys_exit_program(&mut self) -> Result<SysExitProgram, EbpfError> {
-        let program = self.get_program::<RawTracePoint>(SIKTE_RAW_TRACE_POINT_AT_EXIT);
-        debug!("Loading {SYS_EXIT} program");
-        program
-            .load()
-            .map_err(|e| EbpfError::as_load_error(e, SIKTE_RAW_TRACE_POINT_AT_EXIT))?;
+        debug!(
+            "Attaching {} program to {}",
+            SIKTE_RAW_TRACE_POINT_AT_EXIT, SYS_EXIT
+        );
 
-        debug!("Attaching to {SYS_EXIT}");
-        program
-            .attach(SYS_EXIT)
-            .map_err(|e| EbpfError::as_attach_error(e, SIKTE_RAW_TRACE_POINT_AT_EXIT, SYS_EXIT))?;
+        // Note: attach() is already called in attach_sys_enter_program
+        // Since skeleton.attach() attaches all programs, this is a no-op
+        // but we keep it for API compatibility
 
+        debug!("sys_exit program attached (via skeleton.attach())");
         Ok(SysExitProgram { _private: () })
     }
 
-    /// Retrieves an eBPF program by its name
-    fn get_program<'ebpf, T>(&'ebpf mut self, name: &str) -> &'ebpf mut T
-    where
-        &'ebpf mut T: TryFrom<&'ebpf mut Program>,
-        <&'ebpf mut T as TryFrom<&'ebpf mut Program>>::Error: Debug,
-    {
-        debug!("Retrieving program {name}");
-        let program = self.ebpf.program_mut(name).expect("program exists");
-        program
-            .try_into()
-            .unwrap_or_else(|_| panic!("program can be converted to {}", stringify!(T)))
+    /// Get reference to SYSCALL_EVENTS ring buffer map
+    pub fn syscall_events_map(&self) -> &libbpf_rs::Map {
+        &self.skel.maps.SYSCALL_EVENTS
     }
 
-    /// Take the syscalls ring buffer
-    pub fn take_syscalls_ringbuf(&mut self) -> SyscallRingBuf {
-        let ringbuf = RingBuf::try_from(self.ebpf.take_map("SYSCALL_EVENTS").expect("map exists"))
-            .expect("map is of chosen type");
-        SyscallRingBuf(ringbuf)
-    }
-
-    /// Return a mutable view to the PID allow list array map
-    pub fn pid_allow_list_mut(&mut self) -> PidAllowList {
-        let list = HashMap::try_from(self.ebpf.map_mut("PID_ALLOW_LIST").expect("map exists"))
-            .expect("map is of chosen type");
-        PidAllowList(list)
+    /// Get reference to PID_ALLOW_LIST hash map
+    pub fn pid_allow_list_map(&self) -> &libbpf_rs::Map {
+        &self.skel.maps.PID_ALLOW_LIST
     }
 }
 

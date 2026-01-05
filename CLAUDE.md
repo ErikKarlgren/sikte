@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Sikte** is an eBPF-based syscall and performance event tracer for Linux. It captures system calls from running processes, calculates timing information, and provides detailed execution analysis. The tool can either trace specific PIDs or execute commands and trace their syscalls.
+**Sikte** is an eBPF-based syscall tracer for Linux with CO-RE (Compile Once, Run Everywhere) support. It captures system calls from running processes, calculates timing information, and provides detailed execution analysis. The tool can either trace specific PIDs or execute commands and trace their syscalls.
 
 ## Build & Run Commands
 
@@ -24,7 +24,7 @@ just run [args]
 just run-log debug [args]
 
 # Or use cargo directly
-RUST_BACKTRACE=1 RUST_LOG=info cargo run --config 'target."cfg(all())".runner="sudo -E"' -- [args]
+RUST_BACKTRACE=1 RUST_LOG=info cargo run --config 'target."cfg(all())".runner="sudo -E"' -- record --syscalls --command ls
 ```
 
 ### Testing
@@ -46,51 +46,59 @@ just check-system    # Verify kernel eBPF support and capabilities
 
 ## Prerequisites
 
-- Rust stable + nightly toolchains
-  - `rustup toolchain install stable`
-  - `rustup toolchain install nightly --component rust-src`
-- **bpf-linker**: `cargo install bpf-linker` (`--no-default-features` on macOS)
-- Linux kernel 5.8+ with eBPF support (CONFIG_BPF_SYSCALL=y)
-- Root privileges or `CAP_BPF` + `CAP_PERFMON` capabilities
+- **Rust toolchains**:
+  - Stable: `rustup toolchain install stable`
+  - Nightly: `rustup toolchain install nightly --component rust-src`
 
-For cross-compilation (macOS):
-- LLVM: `brew install llvm`
-- musl toolchain: `brew install filosottile/musl-cross/musl-cross`
-- Target: `rustup target add x86_64-unknown-linux-musl`
+- **eBPF development tools**:
+  - clang/LLVM for compiling C eBPF programs
+  - bpftool: `apt-get install linux-tools-generic`
+  - libbpf development headers: `apt-get install libbpf-dev`
+
+- **Kernel requirements**:
+  - Linux kernel 5.8+ with BTF enabled (`/sys/kernel/btf/vmlinux` must exist)
+  - CONFIG_DEBUG_INFO_BTF=y
+  - Root privileges or `CAP_BPF` + `CAP_PERFMON` capabilities
 
 ## Workspace Architecture
 
 This is a Cargo workspace with three crates:
 
 ### sikte (Userspace Application)
-Main binary that orchestrates eBPF program loading, data collection, and event handling.
+Main binary that orchestrates eBPF program loading, data collection, and event handling using libbpf-rs.
 
 **Key modules:**
 - `cli/`: Command-line argument parsing (uses clap)
-- `ebpf/`: eBPF program lifecycle management (loading, attaching, maps)
+- `ebpf/`: eBPF program lifecycle management (skeleton-based loading, attaching, maps)
+  - `sikte_ebpf.rs`: Skeleton-based loader with CO-RE support
+  - `map_types.rs`: Wrappers for libbpf-rs maps
+  - `error.rs`: libbpf-rs error handling
 - `events.rs`: EventBus implementation (tokio broadcast channel)
 - `publishers/`: Extract data from kernel (ring buffers → events)
-  - `syscalls/`: SyscallPublisher reads from SYSCALL_EVENTS ring buffer
-  - `perf_events/`: Framework for CPU sampling (stub)
-- `subscribers/`: Consume events (currently only ShellSubscriber for stdout)
+  - `syscalls/`: SyscallPublisher uses RingBufferBuilder with callbacks
+- `subscribers/`: Consume events (ShellSubscriber for stdout)
 - `syscall_table/`: Maps syscall IDs to names (x86_64 only)
 
 ### sikte-common (Shared Types)
-`no_std` compatible crate with types shared between kernel and userspace.
+`no_std` compatible crate with C-compatible types shared between kernel and userspace.
 
 **Key types:**
 - `SyscallData`: Represents a syscall event (timestamp, PID, state)
-- `SyscallState`: Either `AtEnter{syscall_id}` or `AtExit{syscall_ret}`
+- `SyscallState`: C-compatible tagged union with `tag` (AT_ENTER/AT_EXIT) and `data` union
+- `SyscallStateTag`: Discriminant for state (AT_ENTER=0, AT_EXIT=1)
 - Constants for program names and attachment points
 
 ### sikte-ebpf (eBPF Kernel Programs)
-eBPF programs that run in kernel space, attached to tracepoints.
+C eBPF programs that run in kernel space, attached to raw tracepoints.
+
+**Files:**
+- `raw_trace_points.bpf.c`: C eBPF programs with CO-RE support
+- `raw_trace_points.h`: C header with shared type definitions
+- `vmlinux/vmlinux.h`: Generated kernel type definitions for CO-RE
 
 **Programs:**
 - `sikte_raw_trace_point_at_enter`: Captures syscall entry (sys_enter tracepoint)
 - `sikte_raw_trace_point_at_exit`: Captures syscall exit (sys_exit tracepoint)
-- `sikte_perf_events`: CPU clock sampling (framework)
-- `sikte_trace_points`: Placeholder for future trace points
 
 **Maps:**
 - `SYSCALL_EVENTS`: Ring buffer (1MB) for kernel→userspace event passing
@@ -100,51 +108,72 @@ eBPF programs that run in kernel space, attached to tracepoints.
 
 ```
 Kernel Space:
-  sys_enter/sys_exit tracepoints
+  sys_enter/sys_exit raw tracepoints
          ↓
   eBPF Programs (filter by PID_ALLOW_LIST)
          ↓
   SYSCALL_EVENTS ring buffer
 
 Userspace:
-  SyscallPublisher (polls ring buffer)
+  RingBufferBuilder callback (polls ring buffer)
          ↓
   EventBus (tokio broadcast channel)
          ↓
   ShellSubscriber (pairs enter/exit, calculates duration, prints)
 ```
 
+## CO-RE Support
+
+This project uses libbpf-rs and CO-RE for kernel portability:
+
+**Key benefits:**
+- Single binary works across kernel versions 5.8+
+- Automatic field offset relocations based on kernel BTF
+- No recompilation needed for different kernel configs
+
+**How it works:**
+1. Build time: `bpftool` generates vmlinux.h from `/sys/kernel/btf/vmlinux`
+2. Compile time: clang compiles C eBPF with BTF debug info
+3. Load time: libbpf applies CO-RE relocations for running kernel
+4. Runtime: eBPF programs adapt to kernel-specific structure layouts
+
 ## Build System
 
-The eBPF build process uses Cargo build scripts:
+The build process uses libbpf-cargo instead of aya-build:
 
-1. **sikte-ebpf/build.rs**: Tracks bpf-linker binary changes
-2. **sikte/build.rs**: Invokes `aya_build::build_ebpf()` to compile eBPF programs
-3. Compiled eBPF bytecode is included in the binary at compile time
+1. **sikte/build.rs**: Uses `SkeletonBuilder` to:
+   - Compile C eBPF programs with clang
+   - Generate Rust skeleton bindings
+   - Output `OUT_DIR/sikte.skel.rs`
 
-The build requires `bpf-linker` to be in PATH. eBPF programs target the `bpf` architecture and are compiled separately from userspace code.
+2. **Skeleton-based loading**:
+   - Generated skeleton provides type-safe map and program access
+   - `RawTracePointsSkel::open()` parses eBPF object
+   - `.load()` applies CO-RE relocations and loads into kernel
+   - `.attach()` attaches all programs to tracepoints
 
 ## Key Architectural Patterns
 
 ### Publisher-Subscriber Pattern
 The project uses a multi-publisher, multi-consumer architecture:
-- **Publishers** (EventPublisher trait): Read from eBPF ring buffers, send to EventBus
+- **Publishers** (EventPublisher trait): Read from eBPF ring buffers via callbacks
 - **EventBus**: Tokio broadcast channel (capacity: 1024 events)
 - **Subscribers** (EventSubscriber trait): Consume events from EventBus
 
-This design allows adding new data sources (publishers) and consumers (subscribers) independently.
-
-### eBPF Program Lifecycle
-1. **Load**: `SikteEbpf::load()` loads compiled eBPF bytes into kernel
-2. **Attach**: Programs attach to specific kernel tracepoints (sys_enter, sys_exit)
-3. **Runtime**: Kernel triggers programs on syscall events, data flows through ring buffers
-4. **Cleanup**: Programs auto-detach on drop
+### Ring Buffer Callbacks (libbpf-rs pattern)
+- `RingBufferBuilder` registers callbacks for each ring buffer
+- Callback invoked for each event, deserializes `SyscallData`
+- `poll()` called in blocking task via `tokio::task::block_in_place`
 
 ### PID Filtering
 - User provides PIDs via CLI (`--pid`) or launches a command (`--command`)
 - Userspace populates `PID_ALLOW_LIST` eBPF map
 - Kernel-space eBPF programs check this map before submitting events
-- This avoids overwhelming userspace with irrelevant syscalls
+
+### C-Compatible Data Structures
+- Rust enums with data don't match C tagged unions
+- `SyscallState` uses explicit `tag` field + `union` for C compatibility
+- Helper methods provide safe access: `syscall_id()`, `syscall_ret()`
 
 ## Adding New Features
 
@@ -154,58 +183,51 @@ This design allows adding new data sources (publishers) and consumers (subscribe
 3. Register subscriber in `main.rs` via `event_bus.add_subscriber()`
 
 ### Adding a New eBPF Program
-1. Add program to `sikte-ebpf/src/` (use `#[raw_tracepoint]` or similar macro)
-2. Define any new maps with `#[map]` attribute
-3. If sharing data with userspace, add types to `sikte-common`
-4. Create a publisher in `sikte/src/publishers/` to read from new ring buffer
-5. Update `sikte/src/ebpf/programs.rs` to load and attach the program
+1. Add program to `sikte-ebpf/src/raw_trace_points.bpf.c`
+2. Define any new maps with proper SEC(".maps") annotations
+3. If sharing data with userspace, add types to `sikte-common` and `raw_trace_points.h`
+4. Create a publisher in `sikte/src/publishers/` using `RingBufferBuilder`
+5. Update `sikte/src/ebpf/sikte_ebpf.rs` to expose new maps
 
 ### Syscall Name Resolution
 Currently only x86_64 is supported. To add another architecture:
-1. Obtain syscall table from Linux kernel source (e.g., `arch/arm64/include/asm/unistd.h`)
+1. Obtain syscall table from Linux kernel source
 2. Generate const array in `sikte/src/syscall_table/`
 3. Use conditional compilation (`#[cfg(target_arch = "...")]`)
 
 ## Important Implementation Notes
 
-- All eBPF-related types must be `#[repr(C)]` with explicit alignment
-- Use `bytemuck` for safe zero-copy deserialization from ring buffers
+- All shared types must be C-compatible with `#[repr(C)]` and explicit alignment
+- Use `bytemuck::CheckedBitPattern` for safe zero-copy deserialization
 - Ring buffer can drop events if userspace consumer is slow (logged as warnings)
-- The EventBus uses tokio's broadcast channel; lagging subscribers are detected but don't block publishers
-- ShellSubscriber pairs enter/exit events by thread ID to calculate syscall duration
-- Requires `bump_memlock_rlimit()` for kernels pre-5.11 (memory accounting)
+- Pattern matching uses `state.tag == SyscallStateTag::AT_ENTER` (not Rust enum variants)
+- Helper methods provide safe access: `state.syscall_id()`, `state.syscall_ret()`
+- The generated skeleton is located at `OUT_DIR/sikte.skel.rs`
 
 ## Current Development Status
 
-**Active branch**: `feat/switch_to_libbpf-rs` (migrating from aya to libbpf-rs)
+**Focus**: Syscall tracing with CO-RE support
 
 **Completed**:
-- Syscall enter/exit tracing with timing
+- Syscall enter/exit tracing with CO-RE relocations
 - PID-based filtering
+- Duration calculation between syscall pairs
 - Command execution tracing
 - Shell output subscriber
+- Architecture support for x86_64
 
 **Future work** (see TASKS.md):
 - Syscall argument extraction (requires specific tracepoints)
 - Multiple output backends (database, metrics)
-- Architecture support beyond x86_64
+- Support for additional architectures (ARM)
 - Process fork tracking (sched_process_fork tracepoint)
-
-## Cross-Compilation
-
-Example for x86_64 musl target (from macOS):
-```bash
-CC=x86_64-linux-musl-gcc cargo build --package sikte --release \
-  --target=x86_64-unknown-linux-musl \
-  --config=target.x86_64-unknown-linux-musl.linker=\"x86_64-linux-musl-gcc\"
-```
-
-Binary will be at `target/x86_64-unknown-linux-musl/release/sikte`.
 
 ## Debugging
 
 - Use `RUST_LOG=debug` for verbose logging
 - Ring buffer drops are logged when buffer fills
 - Check kernel eBPF support: `just check-system`
-- Verify bpftool: `sudo bpftool prog list` (shows loaded eBPF programs)
-- For kernel issues: `dmesg | tail` shows BPF verifier errors
+- Verify BTF: `ls -lh /sys/kernel/btf/vmlinux`
+- View loaded eBPF programs: `sudo bpftool prog list`
+- Check for BPF verifier errors: `dmesg | tail`
+- Inspect CO-RE relocations: `llvm-objdump -d sikte-ebpf/src/*.o`

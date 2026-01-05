@@ -7,10 +7,9 @@ license.workspace = true
 
 [features]
 default = []
-user = ["aya"]
+user = []
 
 [dependencies]
-aya = { workspace = true, optional = true }
 bytemuck = { workspace = true, features = ["derive"] }
 
 [lib]

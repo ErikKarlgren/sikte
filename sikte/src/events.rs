@@ -30,6 +30,11 @@ impl EventBus {
         }
     }
 
+    /// Get a sender to publish events to the bus
+    pub fn tx(&self) -> Sender<Event> {
+        self.sender.clone()
+    }
+
     /// Spawn a publishment task that will run inside tokio
     pub fn spawn_publishment<P>(&mut self, publisher: P)
     where

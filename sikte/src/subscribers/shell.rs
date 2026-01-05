@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use libc::pid_t;
-use sikte_common::raw_tracepoints::syscalls::{SyscallData, SyscallState};
+use sikte_common::raw_tracepoints::syscalls::{SyscallData, SyscallStateTag};
 
 use super::EventSubscriber;
 use crate::publishers::syscalls::to_syscall_name;
@@ -43,13 +43,14 @@ impl EventSubscriber for ShellSubscriber {
             pid: tid,
         } = *syscall_data;
 
-        match state {
-            SyscallState::AtEnter { .. } => {
+        match state.tag {
+            SyscallStateTag::AT_ENTER => {
                 self.thr_to_last_sys_enter.insert(tid, *syscall_data);
             }
-            SyscallState::AtExit { .. } => match self.thr_to_last_sys_enter.remove(&tid) {
+            SyscallStateTag::AT_EXIT => match self.thr_to_last_sys_enter.remove(&tid) {
                 Some(last_data) => {
-                    if let SyscallState::AtEnter { syscall_id } = last_data.state {
+                    if last_data.state.tag == SyscallStateTag::AT_ENTER {
+                        let syscall_id = last_data.state.syscall_id().unwrap();
                         let syscall_name = to_syscall_name(syscall_id).unwrap_or("UNKNOWN");
                         let time_ns = timestamp - last_data.timestamp;
                         let time_us = time_ns as f64 / 1000f64;
@@ -57,7 +58,7 @@ impl EventSubscriber for ShellSubscriber {
                         self.total_syscalls_time += time_us;
                     } else {
                         unreachable!(
-                            "only SyscallState::AtEnter can be stored in self.thr_to_last_sys_enter"
+                            "only SyscallStateTag::AT_ENTER can be stored in self.thr_to_last_sys_enter"
                         );
                     }
                 }
@@ -65,6 +66,9 @@ impl EventSubscriber for ShellSubscriber {
                     println!("({pid}/{tid}) ??? (took ??? us)");
                 }
             },
+            _ => {
+                // Unknown state tag
+            }
         }
     }
 }

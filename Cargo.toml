@@ -8,11 +8,8 @@ license = "MIT OR Apache-2.0"
 edition = "2024"
 
 [workspace.dependencies]
-aya = { version = "0.13.1", default-features = false }
-aya-build = { version = "0.1.2", default-features = false }
-aya-ebpf = { version = "0.1.1", default-features = false }
-aya-log = { version = "0.2.1", default-features = false }
-aya-log-ebpf = { version = "0.1.1", default-features = false }
+libbpf-rs = { version = "0.24", default-features = false }
+libbpf-cargo = { version = "0.24", default-features = false }
 
 anyhow = { version = "1", default-features = false }
 bytemuck = { version = "1.23.2", default-features = false }
