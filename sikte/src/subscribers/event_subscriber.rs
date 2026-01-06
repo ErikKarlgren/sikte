@@ -1,4 +1,4 @@
-use crate::common::raw_tracepoints::syscalls::SyscallData;
+use crate::common::generated_types::SyscallData;
 
 /// Reads eBPF events
 pub trait EventSubscriber {

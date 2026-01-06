@@ -6,16 +6,16 @@ use crate::common::constants::{attach_points::*, program_names::*};
 
 use super::error::EbpfError;
 
-// Include generated skeleton
+// Include generated skeleton (following libbpf-rs examples pattern)
 mod sikte_skel {
-    include!(concat!(env!("OUT_DIR"), "/sikte.skel.rs"));
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/bpf/sikte.skel.rs"));
 }
 
-use sikte_skel::*;
+pub use sikte_skel::*;
 
 /// Central point for interacting with eBPF from user space
 pub struct SikteEbpf {
-    skel: RawTracePointsSkel<'static>,
+    skel: SikteSkel<'static>,
 }
 
 impl SikteEbpf {
@@ -24,7 +24,7 @@ impl SikteEbpf {
         debug!("Opening eBPF skeleton");
 
         // Open skeleton (parses object but doesn't load into kernel)
-        let skel_builder = RawTracePointsSkelBuilder::default();
+        let skel_builder = SikteSkelBuilder::default();
         let open_object = Box::leak(Box::new(MaybeUninit::uninit()));
         let open_skel = skel_builder
             .open(open_object)

@@ -1,23 +1,32 @@
 use libbpf_cargo::SkeletonBuilder;
-use std::{env, path::PathBuf};
+use std::{env, ffi::OsStr, path::PathBuf};
+
+const SRC: &str = "src/bpf/sikte.bpf.c";
+const HEADER: &str = "src/bpf/sikte.h";
 
 fn main() {
-    let out_path = PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR must be set"));
+    // Output skeleton to source tree (following libbpf-rs examples)
+    let out = PathBuf::from(
+        env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR must be set in build script"),
+    )
+    .join("src")
+    .join("bpf")
+    .join("sikte.skel.rs");
+
+    let arch = env::var("CARGO_CFG_TARGET_ARCH")
+        .expect("CARGO_CFG_TARGET_ARCH must be set in build script");
 
     // Generate Rust skeleton from C eBPF programs
     SkeletonBuilder::new()
-        .source("ebpf-src/raw_trace_points.bpf.c")
+        .source(SRC)
         .clang_args([
-            "-Iebpf-src/vmlinux",
-            "-Iebpf-src",
-            "-D__TARGET_ARCH_x86", // Architecture-specific define
-            "-g",                  // Debug info for BTF
+            OsStr::new("-I"),
+            vmlinux::include_path_root().join(arch).as_os_str(),
         ])
-        .build_and_generate(&mut out_path.join("sikte.skel.rs"))
+        .build_and_generate(&out)
         .expect("Failed to build and generate skeleton");
 
     // Trigger rebuild if source files change
-    println!("cargo:rerun-if-changed=ebpf-src/raw_trace_points.bpf.c");
-    println!("cargo:rerun-if-changed=ebpf-src/raw_trace_points.h");
-    println!("cargo:rerun-if-changed=ebpf-src/vmlinux/vmlinux.h");
+    println!("cargo:rerun-if-changed={SRC}");
+    println!("cargo:rerun-if-changed={HEADER}");
 }

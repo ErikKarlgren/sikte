@@ -1,7 +1,7 @@
-#ifndef __RAW_TRACE_POINTS_H
-#define __RAW_TRACE_POINTS_H
+#ifndef __SIKTE_H
+#define __SIKTE_H
 
-#include "vmlinux/vmlinux.h"
+#include "vmlinux.h"
 
 // Must match Rust constants in sikte-common
 #define MAX_SYSCALL_EVENTS (1 << 20)  // 1MB ring buffer
@@ -38,4 +38,4 @@ struct syscall_data {
     struct syscall_state state;
 } __attribute__((aligned(8)));
 
-#endif  // __RAW_TRACE_POINTS_H
+#endif  // __SIKTE_H

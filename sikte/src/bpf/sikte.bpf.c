@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0 OR MIT
-#include "raw_trace_points.h"
+#include "vmlinux.h"
+#include "sikte.h"
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
-#include "vmlinux/vmlinux.h"
 
 char LICENSE[] SEC("license") = "GNU Affero General Public License";
+
+// Dummy instance to force skeleton to generate Rust type definitions
+struct syscall_data _syscall_data = {0};
 
 // Ring buffer for syscall events (kernel -> userspace)
 struct {

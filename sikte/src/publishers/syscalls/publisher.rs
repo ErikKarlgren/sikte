@@ -5,9 +5,9 @@ use std::sync::{
 use std::time::Duration;
 
 use anyhow::anyhow;
-use bytemuck::checked;
 use log::{error, warn};
-use crate::common::raw_tracepoints::syscalls::SyscallData;
+use plain::Plain;
+use crate::common::generated_types::SyscallData;
 use tokio::sync::broadcast::Sender;
 
 use crate::{
@@ -53,11 +53,12 @@ impl SyscallPublisher {
         let mut builder = libbpf_rs::RingBufferBuilder::new();
 
         builder.add(ring_buf.map(), move |data: &[u8]| -> i32 {
-            // Parse syscall data
-            match checked::try_from_bytes::<SyscallData>(data) {
-                Ok(syscall_data) => {
+            // Parse syscall data using plain crate (zero-copy deserialization)
+            let mut syscall_data = SyscallData::default();
+            match plain::copy_from_bytes(&mut syscall_data, data) {
+                Ok(()) => {
                     // Send to event bus
-                    if let Err(e) = tx.send(Event::Syscall(*syscall_data)) {
+                    if let Err(e) = tx.send(Event::Syscall(syscall_data)) {
                         error!("Failed to send syscall event: {}", e);
                         return -1;
                     }
