@@ -1,4 +1,4 @@
-use clap::{Args, CommandFactory, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use log::debug;
 
 #[derive(Debug, Parser)]
@@ -13,20 +13,6 @@ impl Cli {
     /// Parse args and do some checks
     pub fn parse_args() -> Self {
         let args = Cli::parse();
-
-        if let Commands::Record(RecordArgs {
-            options: TracingOptions { syscalls: false },
-            ..
-        }) = args.command
-        {
-            Cli::command()
-                .error(
-                    clap::error::ErrorKind::TooFewValues,
-                    "You need to set --syscalls to trace!",
-                )
-                .exit();
-        }
-
         debug!("parsing args succeded");
         args
     }
@@ -42,9 +28,6 @@ pub enum Commands {
 pub struct RecordArgs {
     #[command(flatten)]
     pub target: TargetArgs,
-
-    #[command(flatten)]
-    pub options: TracingOptions,
 }
 
 #[derive(Debug, Args)]
@@ -74,11 +57,4 @@ impl TargetArgs {
 pub enum Target {
     Pid(Vec<i32>),
     Command(Vec<String>),
-}
-
-#[derive(Debug, Args)]
-pub struct TracingOptions {
-    /// Trace syscalls
-    #[arg(long)]
-    pub syscalls: bool,
 }

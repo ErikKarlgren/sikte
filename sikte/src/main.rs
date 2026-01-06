@@ -39,21 +39,18 @@ async fn main() -> anyhow::Result<()> {
     let mut child_process = None;
 
     match args.command {
-        Commands::Record(RecordArgs { target, options }) => {
-            if options.syscalls {
-                let sys_enter = ebpf.attach_sys_enter_program()?;
-                let sys_exit = ebpf.attach_sys_exit_program()?;
-                let requirements = syscalls::Requirements::new(sys_enter, sys_exit);
+        Commands::Record(RecordArgs { target }) => {
+            let sys_enter = ebpf.attach_sys_enter_program()?;
+            let sys_exit = ebpf.attach_sys_exit_program()?;
+            let requirements = syscalls::Requirements::new(sys_enter, sys_exit);
 
-                let pid_allow_list = PidAllowList::new(ebpf.pid_allow_list_map());
-                child_process = add_pids_to_allowlist(target, &pid_allow_list).await?;
+            let pid_allow_list = PidAllowList::new(ebpf.pid_allow_list_map());
+            child_process = add_pids_to_allowlist(target, &pid_allow_list).await?;
 
-                let ring_buf = SyscallRingBuf::new(ebpf.syscall_events_map());
-                let tx = event_bus.tx();
-                let publisher =
-                    SyscallPublisher::new(requirements, ring_buf, interrupted.clone(), tx)?;
-                event_bus.spawn_publishment(publisher);
-            }
+            let ring_buf = SyscallRingBuf::new(ebpf.syscall_events_map());
+            let tx = event_bus.tx();
+            let publisher = SyscallPublisher::new(requirements, ring_buf, interrupted.clone(), tx)?;
+            event_bus.spawn_publishment(publisher);
         }
     }
 
