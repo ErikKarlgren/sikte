@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::common::generated_types::{SyscallData, SyscallStateExt, syscall_state_tag};
 use libc::pid_t;
+use log::{debug, trace};
 
 use super::EventSubscriber;
 use crate::publishers::syscalls::to_syscall_name;
@@ -45,27 +46,31 @@ impl EventSubscriber for ShellSubscriber {
 
         match state.tag {
             syscall_state_tag::AT_ENTER => {
+                trace!("sys_enter: pid {pid}, tid {tid}");
                 self.thr_to_last_sys_enter.insert(tid, *syscall_data);
             }
-            syscall_state_tag::AT_EXIT => match self.thr_to_last_sys_enter.remove(&tid) {
-                Some(last_data) => {
-                    if last_data.state.tag == syscall_state_tag::AT_ENTER {
-                        let syscall_id = last_data.state.syscall_id().unwrap();
-                        let syscall_name = to_syscall_name(syscall_id).unwrap_or("UNKNOWN");
-                        let time_ns = timestamp - last_data.timestamp;
-                        let time_us = time_ns as f64 / 1000f64;
-                        println!("({pid}/{tid}) {syscall_name} (took {time_us} us)");
-                        self.total_syscalls_time += time_us;
-                    } else {
-                        unreachable!(
-                            "only syscall_state_tag::AT_ENTER can be stored in self.thr_to_last_sys_enter"
-                        );
+            syscall_state_tag::AT_EXIT => {
+                trace!("sys_exit: pid {pid}, tid {tid}");
+                match self.thr_to_last_sys_enter.remove(&tid) {
+                    Some(last_data) => {
+                        if last_data.state.tag == syscall_state_tag::AT_ENTER {
+                            let syscall_id = last_data.state.syscall_id().unwrap();
+                            let syscall_name = to_syscall_name(syscall_id).unwrap_or("UNKNOWN");
+                            let time_ns = timestamp - last_data.timestamp;
+                            let time_us = time_ns as f64 / 1000f64;
+                            println!("({pid}/{tid}) {syscall_name} (took {time_us} us)");
+                            self.total_syscalls_time += time_us;
+                        } else {
+                            unreachable!(
+                                "only syscall_state_tag::AT_ENTER can be stored in self.thr_to_last_sys_enter"
+                            );
+                        }
+                    }
+                    None => {
+                        println!("({pid}/{tid}) ??? (took ??? us)");
                     }
                 }
-                None => {
-                    println!("({pid}/{tid}) ??? (took ??? us)");
-                }
-            },
+            }
             _ => {
                 // Unknown state tag
             }
