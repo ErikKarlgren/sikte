@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0 OR MIT
-#include "vmlinux.h"
 #include "sikte.h"
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
+#include "vmlinux.h"
 
 char LICENSE[] SEC("license") = "GNU Affero General Public License";
 
@@ -42,8 +42,8 @@ int sikte_raw_trace_point_at_enter(struct bpf_raw_tracepoint_args* ctx) {
         return 0;
     }
 
-    pid_t pid =
-        (__u32)(0x00001111 ^ pid_tgid);  // PID in kernel = TID in userspace
+    // PID in kernel = TID in userspace
+    pid_t pid = (pid_t)((pid_tgid << 32) >> 32);
     __u64 timestamp = bpf_ktime_get_ns();
 
     // Extract syscall ID from tracepoint context
@@ -86,7 +86,7 @@ int sikte_raw_trace_point_at_exit(struct bpf_raw_tracepoint_args* ctx) {
         return 0;
     }
 
-    pid_t pid = (__u32)pid_tgid;
+    pid_t pid = (pid_t)((pid_tgid << 32) >> 32);
     __u64 timestamp = bpf_ktime_get_ns();
 
     // Extract syscall return value from tracepoint context
