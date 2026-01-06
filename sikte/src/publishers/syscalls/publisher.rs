@@ -4,10 +4,10 @@ use std::sync::{
 };
 use std::time::Duration;
 
+use crate::common::generated_types::SyscallData;
 use anyhow::anyhow;
 use log::{error, warn};
 use plain::Plain;
-use crate::common::generated_types::SyscallData;
 use tokio::sync::broadcast::Sender;
 
 use crate::{

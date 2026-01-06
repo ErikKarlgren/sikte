@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
+use crate::common::generated_types::{SyscallData, SyscallStateExt, syscall_state_tag};
 use libc::pid_t;
-use crate::common::generated_types::{syscall_state_tag, SyscallData, SyscallStateExt};
 
 use super::EventSubscriber;
 use crate::publishers::syscalls::to_syscall_name;

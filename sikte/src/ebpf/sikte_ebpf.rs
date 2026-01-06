@@ -1,14 +1,17 @@
 use std::mem::MaybeUninit;
 
+use crate::common::constants::{attach_points::*, program_names::*};
 use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
 use log::debug;
-use crate::common::constants::{attach_points::*, program_names::*};
 
 use super::error::EbpfError;
 
 // Include generated skeleton (following libbpf-rs examples pattern)
 mod sikte_skel {
-    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/bpf/sikte.skel.rs"));
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/bpf/sikte.skel.rs"
+    ));
 }
 
 pub use sikte_skel::*;

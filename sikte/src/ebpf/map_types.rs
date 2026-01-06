@@ -1,6 +1,6 @@
+use crate::common::generic_types::Unused;
 use libbpf_rs::MapCore;
 use libc::pid_t;
-use crate::common::generic_types::Unused;
 
 /// Syscall ring buffer wrapper
 pub struct SyscallRingBuf<'a> {

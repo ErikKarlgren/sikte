@@ -1,5 +1,5 @@
-use log::{debug, error};
 use crate::common::generated_types::SyscallData;
+use log::{debug, error};
 use tokio::{
     sync::broadcast::{Receiver, Sender, error::RecvError},
     task::JoinHandle,

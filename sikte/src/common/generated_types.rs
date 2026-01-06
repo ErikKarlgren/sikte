@@ -3,19 +3,18 @@
 /// This module provides a bridge between the auto-generated types from libbpf-rs
 /// and the rest of the codebase. It re-exports generated types with conventional
 /// naming and adds helper methods for working with tagged unions.
-
 use plain::Plain;
 
 // Include generated skeleton to access types module
 mod sikte_skel {
-    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/bpf/sikte.skel.rs"));
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/bpf/sikte.skel.rs"
+    ));
 }
 
 // Re-export generated types with capitalized names to match Rust conventions
-pub use sikte_skel::types::{
-    syscall_data as SyscallData,
-    syscall_state as SyscallState,
-};
+pub use sikte_skel::types::{syscall_data as SyscallData, syscall_state as SyscallState};
 
 pub type PidT = i32;
 
