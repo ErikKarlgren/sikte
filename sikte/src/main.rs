@@ -35,6 +35,8 @@ async fn main() -> anyhow::Result<()> {
     let mut event_bus = EventBus::new();
     event_bus.spawn_subscription(ShellSubscriber::new());
 
+    let mut child_process = None;
+
     match args.command {
         Commands::Record(RecordArgs { target, options }) => {
             if options.syscalls {
@@ -43,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
                 let requirements = syscalls::Requirements::new(sys_enter, sys_exit);
 
                 let pid_allow_list = PidAllowList::new(ebpf.pid_allow_list_map());
-                add_pids_to_allowlist(target, &pid_allow_list).await?;
+                child_process = add_pids_to_allowlist(target, &pid_allow_list).await?;
 
                 let ring_buf = SyscallRingBuf::new(ebpf.syscall_events_map());
                 let tx = event_bus.tx();
@@ -54,17 +56,27 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    let ctrl_c = signal::ctrl_c();
+    // Wait for either Ctrl-C or child process completion
     println!("Waiting for Ctrl-C...");
-    ctrl_c.await?;
-    interrupted.store(true, Ordering::Release);
-    println!("Exiting...");
 
-    // tokio::spawn(async move {
-    //     let ctrl_c = signal::ctrl_c();
-    //     ctrl_c.await.expect("failed to listen for event");
-    //     interrupted.store(true, Ordering::Release);
-    // });
+    if let Some(mut child) = child_process {
+        tokio::select! {
+            _ = signal::ctrl_c() => {
+                println!("Received Ctrl-C, exiting...");
+            }
+            result = child.wait() => {
+                match result {
+                    Ok(status) => println!("Traced process exited with status: {}", status),
+                    Err(e) => eprintln!("Error waiting for child process: {}", e),
+                }
+            }
+        }
+    } else {
+        signal::ctrl_c().await?;
+        println!("Received Ctrl-C, exiting...");
+    }
+
+    interrupted.store(true, Ordering::Release);
 
     Ok(())
 }
@@ -85,7 +97,7 @@ fn bump_memlock_rlimit() {
 async fn add_pids_to_allowlist(
     target: TargetArgs,
     pid_allow_list: &PidAllowList<'_>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<Option<tokio::process::Child>> {
     match target.to_target() {
         Target::Pid(pids) => {
             for pid in &pids {
@@ -99,6 +111,7 @@ async fn add_pids_to_allowlist(
                     .intersperse(", ".to_string())
                     .collect::<String>()
             );
+            Ok(None)
         }
         Target::Command(command_args) => {
             if command_args.is_empty() {
@@ -109,12 +122,11 @@ async fn add_pids_to_allowlist(
             let args = &command_args[1..];
 
             info!("Running program: {command_args:?}");
-            let mut child = Command::new(program).args(args).spawn()?;
+            let child = Command::new(program).args(args).spawn()?;
             let pid = child.id().expect("program shouldn't have stopped yet");
             pid_allow_list.insert(pid as pid_t)?;
 
-            child.wait().await?;
+            Ok(Some(child))
         }
     }
-    Ok(())
 }

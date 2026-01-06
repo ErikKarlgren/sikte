@@ -72,6 +72,7 @@ where
         let num_events = publisher.publish_events(&tx).await;
         if let Err(err) = num_events {
             error!("Error while publishing: {err}");
+            break;
         }
     }
 }
