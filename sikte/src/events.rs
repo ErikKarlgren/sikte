@@ -1,5 +1,5 @@
 use log::{debug, error};
-use sikte_common::raw_tracepoints::syscalls::SyscallData;
+use crate::common::raw_tracepoints::syscalls::SyscallData;
 use tokio::{
     sync::broadcast::{Receiver, Sender, error::RecvError},
     task::JoinHandle,

@@ -2,7 +2,7 @@ use std::mem::MaybeUninit;
 
 use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
 use log::debug;
-use sikte_common::constants::{attach_points::*, program_names::*};
+use crate::common::constants::{attach_points::*, program_names::*};
 
 use super::error::EbpfError;
 

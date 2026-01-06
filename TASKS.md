@@ -1,39 +1,4 @@
-# Tasks
-- [x] Make cli accept mandatory PID
-- [x] Make ebpf program always filter by PID
-- [x] Show syscalls (sys enter and exit) for PIDs given
-- [x] Execute commands and track their syscalls
-- [x] Map syscall IDs to their names (userspace?)
-- [x] Calculate time spent per syscall
-- [x] Print time spent per syscall
-- [ ] Add a syscall filter using array. Should work for x64, arm, ...
-- [ ] Fix ctrl-c bug: if command has finished, i shouldn't need to press ctrl-c
-- [ ] Refactor sikte to make my life easier (make more modules)
-  - [ ] Refactor eBPF program creation and loading
-  - [ ] Create "SyscallDataConsumer" trait? One for printing to shell, another for storing to sqlite
-
-- [-] Make command not start immediately so as to ensure we're tracking all of its syscalls and not lose some information at the beginning (it can send a sigstop signal to self)
-  - I tried creating the structs PasuableCommand and PausedCommand, but working with fork() and exec() was getting crazy, and the results brittle
-  - I'll use an eBPF trace point for sched_process_fork, which seems to be far more reliable
-
-## Trace points
-- [ ] Add trace point to sched_process_fork for detecting when a command is launched
-  - Take a look at this: https://www.nccgroup.com/research-blog/some-musings-on-common-ebpf-linux-tracing-bugs/
-- [ ] Add normal trace points for every syscall (or at least the most interesting ones)
-  - Would make my life much easier for showing syscall args
-  - With this you can print all the syscall trace points for your kernel version: `sudo bpftrace -l 'tracepoint:syscalls:*'`
-  - Using aya-tool i can supposedly generate the required bindings automatically
-
-## Architecture (sikte)
-We should have a multiple-publisher and multiple-consumer architecture with sth like the following:
-```text
-######## eBPF ########   ############################ user space ############################
-
-syscall_ringbuffer -------> Syscallpublisher ---+               +-> ShellConsumer -> stdout
-                                               |-> EventQueue -|
-perf_events_ringbuffer ---> PerfEventpublisher -+    (tokio)    +-> DBConsumer ----> sqlite
-
-```
-- Add more publishers as you add more eBPF events
-- Add more subscribers as you need to
-- EventQueue will have a generic `Event` that may include syscalls, perf events, and so on
+# Tasks for current branch:
+- [ ] Revise the C code thoroughly
+  - [ ] Switch to using CO-RE instead of ctx directly. Is this possible?
+-

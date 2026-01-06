@@ -7,7 +7,7 @@ use std::time::Duration;
 use anyhow::anyhow;
 use bytemuck::checked;
 use log::{error, warn};
-use sikte_common::raw_tracepoints::syscalls::SyscallData;
+use crate::common::raw_tracepoints::syscalls::SyscallData;
 use tokio::sync::broadcast::Sender;
 
 use crate::{

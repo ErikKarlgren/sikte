@@ -60,15 +60,19 @@ just check-system    # Verify kernel eBPF support and capabilities
   - CONFIG_DEBUG_INFO_BTF=y
   - Root privileges or `CAP_BPF` + `CAP_PERFMON` capabilities
 
-## Workspace Architecture
+## Project Architecture
 
-This is a Cargo workspace with three crates:
+This is a single-crate project with a workspace structure (ready for future expansion to multiple crates like a GUI).
 
-### sikte (Userspace Application)
+### sikte (Main Crate)
 Main binary that orchestrates eBPF program loading, data collection, and event handling using libbpf-rs.
 
-**Key modules:**
+**Rust modules (sikte/src/):**
 - `cli/`: Command-line argument parsing (uses clap)
+- `common/`: C-compatible types shared between kernel and userspace
+  - `constants/`: Program names and attachment point constants
+  - `generic_types.rs`: Generic types for eBPF maps
+  - `raw_tracepoints/syscalls.rs`: SyscallData, SyscallState, SyscallStateTag types
 - `ebpf/`: eBPF program lifecycle management (skeleton-based loading, attaching, maps)
   - `sikte_ebpf.rs`: Skeleton-based loader with CO-RE support
   - `map_types.rs`: Wrappers for libbpf-rs maps
@@ -79,21 +83,12 @@ Main binary that orchestrates eBPF program loading, data collection, and event h
 - `subscribers/`: Consume events (ShellSubscriber for stdout)
 - `syscall_table/`: Maps syscall IDs to names (x86_64 only)
 
-### sikte-common (Shared Types)
-`no_std` compatible crate with C-compatible types shared between kernel and userspace.
-
-**Key types:**
-- `SyscallData`: Represents a syscall event (timestamp, PID, state)
-- `SyscallState`: C-compatible tagged union with `tag` (AT_ENTER/AT_EXIT) and `data` union
-- `SyscallStateTag`: Discriminant for state (AT_ENTER=0, AT_EXIT=1)
-- Constants for program names and attachment points
-
-### sikte-ebpf (eBPF Kernel Programs)
+**C eBPF programs (sikte/ebpf-src/):**
 C eBPF programs that run in kernel space, attached to raw tracepoints.
 
 **Files:**
 - `raw_trace_points.bpf.c`: C eBPF programs with CO-RE support
-- `raw_trace_points.h`: C header with shared type definitions
+- `raw_trace_points.h`: C header with shared type definitions (includes vmlinux.h)
 - `vmlinux/vmlinux.h`: Generated kernel type definitions for CO-RE
 
 **Programs:**
@@ -183,9 +178,9 @@ The project uses a multi-publisher, multi-consumer architecture:
 3. Register subscriber in `main.rs` via `event_bus.add_subscriber()`
 
 ### Adding a New eBPF Program
-1. Add program to `sikte-ebpf/src/raw_trace_points.bpf.c`
+1. Add program to `sikte/ebpf-src/raw_trace_points.bpf.c`
 2. Define any new maps with proper SEC(".maps") annotations
-3. If sharing data with userspace, add types to `sikte-common` and `raw_trace_points.h`
+3. If sharing data with userspace, add types to `sikte/src/common/` and `sikte/ebpf-src/raw_trace_points.h`
 4. Create a publisher in `sikte/src/publishers/` using `RingBufferBuilder`
 5. Update `sikte/src/ebpf/sikte_ebpf.rs` to expose new maps
 
@@ -230,4 +225,4 @@ Currently only x86_64 is supported. To add another architecture:
 - Verify BTF: `ls -lh /sys/kernel/btf/vmlinux`
 - View loaded eBPF programs: `sudo bpftool prog list`
 - Check for BPF verifier errors: `dmesg | tail`
-- Inspect CO-RE relocations: `llvm-objdump -d sikte-ebpf/src/*.o`
+- Inspect CO-RE relocations: `llvm-objdump -d sikte/ebpf-src/*.o`

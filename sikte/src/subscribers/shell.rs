@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use libc::pid_t;
-use sikte_common::raw_tracepoints::syscalls::{SyscallData, SyscallStateTag};
+use crate::common::raw_tracepoints::syscalls::{SyscallData, SyscallStateTag};
 
 use super::EventSubscriber;
 use crate::publishers::syscalls::to_syscall_name;

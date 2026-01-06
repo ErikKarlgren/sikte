@@ -6,10 +6,10 @@ fn main() {
 
     // Generate Rust skeleton from C eBPF programs
     SkeletonBuilder::new()
-        .source("../sikte-ebpf/src/raw_trace_points.bpf.c")
+        .source("ebpf-src/raw_trace_points.bpf.c")
         .clang_args([
-            "-I../sikte-ebpf/src/vmlinux",
-            "-I../sikte-ebpf/src",
+            "-Iebpf-src/vmlinux",
+            "-Iebpf-src",
             "-D__TARGET_ARCH_x86", // Architecture-specific define
             "-g",                  // Debug info for BTF
         ])
@@ -17,7 +17,7 @@ fn main() {
         .expect("Failed to build and generate skeleton");
 
     // Trigger rebuild if source files change
-    println!("cargo:rerun-if-changed=../sikte-ebpf/src/raw_trace_points.bpf.c");
-    println!("cargo:rerun-if-changed=../sikte-ebpf/src/raw_trace_points.h");
-    println!("cargo:rerun-if-changed=../sikte-ebpf/src/vmlinux/vmlinux.h");
+    println!("cargo:rerun-if-changed=ebpf-src/raw_trace_points.bpf.c");
+    println!("cargo:rerun-if-changed=ebpf-src/raw_trace_points.h");
+    println!("cargo:rerun-if-changed=ebpf-src/vmlinux/vmlinux.h");
 }

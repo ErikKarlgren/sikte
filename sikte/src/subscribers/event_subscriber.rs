@@ -1,4 +1,4 @@
-use sikte_common::raw_tracepoints::syscalls::SyscallData;
+use crate::common::raw_tracepoints::syscalls::SyscallData;
 
 /// Reads eBPF events
 pub trait EventSubscriber {

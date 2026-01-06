@@ -1,13 +1,11 @@
 #ifndef __RAW_TRACE_POINTS_H
 #define __RAW_TRACE_POINTS_H
 
+#include "vmlinux/vmlinux.h"
+
 // Must match Rust constants in sikte-common
 #define MAX_SYSCALL_EVENTS (1 << 20)  // 1MB ring buffer
 #define NUM_ALLOWED_PIDS (1 << 10)    // 1024 PIDs
-
-// Type alias matching Rust PidT
-// Note: vmlinux.h provides __s32, __s64, __u32, __u64 types
-typedef __s32 pid_t;
 
 // Syscall state discriminant
 enum syscall_state_tag {

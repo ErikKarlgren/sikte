@@ -39,7 +39,8 @@ int sikte_raw_trace_point_at_enter(struct bpf_raw_tracepoint_args* ctx) {
         return 0;
     }
 
-    pid_t pid = (__u32)pid_tgid;  // PID in kernel = TID in userspace
+    pid_t pid =
+        (__u32)(0x00001111 ^ pid_tgid);  // PID in kernel = TID in userspace
     __u64 timestamp = bpf_ktime_get_ns();
 
     // Extract syscall ID from tracepoint context

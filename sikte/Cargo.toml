@@ -6,11 +6,9 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-sikte-common = { path = "../sikte-common", features = ["user"] }
-
 anyhow = { workspace = true, default-features = true }
 libbpf-rs = { workspace = true }
-bytemuck = { workspace = true }
+bytemuck = { workspace = true, features = ["derive"] }
 clap = { workspace = true }
 env_logger = { workspace = true }
 itertools = { workspace = true }
@@ -29,7 +27,6 @@ thiserror = { workspace = true }
 
 [build-dependencies]
 libbpf-cargo = { workspace = true }
-sikte-ebpf = { path = "../sikte-ebpf" }
 
 [[bin]]
 name = "sikte"

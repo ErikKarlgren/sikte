@@ -618,22 +618,9 @@ dependencies = [
  "libbpf-rs",
  "libc",
  "log",
- "sikte-common",
- "sikte-ebpf",
  "thiserror 2.0.16",
  "tokio",
 ]
-
-[[package]]
-name = "sikte-common"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
-]
-
-[[package]]
-name = "sikte-ebpf"
-version = "0.1.0"
 
 [[package]]
 name = "slab"

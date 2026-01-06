@@ -1,4 +1,5 @@
 mod cli;
+mod common;
 mod ebpf;
 mod events;
 mod publishers;
