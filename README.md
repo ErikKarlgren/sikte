@@ -56,7 +56,6 @@ Cargo build scripts automatically:
 
 ## License
 
-All code is distributed under the terms of the [GNU General Public License,
-Version 2].
+All code is distributed under the terms of the [GNU Affero General Public License].
 
-[GNU General Public License, Version 2]: LICENSE
+[GNU Affero General Public License]: LICENSE

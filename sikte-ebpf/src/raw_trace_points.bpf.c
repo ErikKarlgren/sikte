@@ -5,7 +5,7 @@
 #include <bpf/bpf_core_read.h>
 #include "raw_trace_points.h"
 
-char LICENSE[] SEC("license") = "Dual MIT/GPL";
+char LICENSE[] SEC("license") = "GNU Affero General Public License";
 
 // Ring buffer for syscall events (kernel -> userspace)
 struct {

@@ -4,7 +4,7 @@ members = ["sikte", "sikte-common", "sikte-ebpf"]
 default-members = ["sikte", "sikte-common"]
 
 [workspace.package]
-license = "MIT OR Apache-2.0"
+license = "GNU Affero General Public License"
 edition = "2024"
 
 [workspace.dependencies]
