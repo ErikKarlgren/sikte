@@ -2,13 +2,17 @@
 
 default: check
 
-build:
+format:
+    clang-format -i sikte/src/bpf/sikte.bpf.c sikte/src/bpf/sikte.h
+    cargo fmt
+
+build: format
     cargo build
 
-build-release:
+build-release: format
     cargo build --release
 
-check:
+check: format
     cargo check && cargo clippy
 
 run *args: (run-log "info" args)
@@ -42,9 +46,8 @@ docker-clean:
 
 ### OTHER COMMANDS ###
 
-fix:
+fix: format
     cargo clippy --fix
-    cargo +nightly fmt
     git add .
     git commit -m "chore(clippy): run fixes"
 

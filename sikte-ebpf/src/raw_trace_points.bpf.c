@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0 OR MIT
-#include "vmlinux/vmlinux.h"
+#include "raw_trace_points.h"
+#include <bpf/bpf_core_read.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
-#include <bpf/bpf_core_read.h>
-#include "raw_trace_points.h"
+#include "vmlinux/vmlinux.h"
 
 char LICENSE[] SEC("license") = "GNU Affero General Public License";
 
@@ -29,7 +29,7 @@ static __always_inline bool is_tgid_in_allowlist(pid_t tgid) {
 // Raw tracepoint handler for sys_enter
 // https://elixir.bootlin.com/linux/v6.16/source/include/trace/events/syscalls.h#L20
 SEC("raw_tp/sys_enter")
-int sikte_raw_trace_point_at_enter(struct bpf_raw_tracepoint_args *ctx) {
+int sikte_raw_trace_point_at_enter(struct bpf_raw_tracepoint_args* ctx) {
     // Get current process/thread IDs
     __u64 pid_tgid = bpf_get_current_pid_tgid();
     pid_t tgid = pid_tgid >> 32;  // TGID = userspace PID
@@ -48,11 +48,12 @@ int sikte_raw_trace_point_at_enter(struct bpf_raw_tracepoint_args *ctx) {
     __s64 syscall_id = (long)ctx->args[1];
 
     // Reserve space in ring buffer
-    struct syscall_data *data = bpf_ringbuf_reserve(&SYSCALL_EVENTS,
-                                                      sizeof(struct syscall_data), 0);
+    struct syscall_data* data =
+        bpf_ringbuf_reserve(&SYSCALL_EVENTS, sizeof(struct syscall_data), 0);
     if (!data) {
         // Ring buffer full - drop event
-        // Could use bpf_printk for debugging: bpf_printk("Dropped sys_enter: tgid=%d\n", tgid);
+        // Could use bpf_printk for debugging: bpf_printk("Dropped sys_enter:
+        // tgid=%d\n", tgid);
         return 0;
     }
 
@@ -71,7 +72,7 @@ int sikte_raw_trace_point_at_enter(struct bpf_raw_tracepoint_args *ctx) {
 // Raw tracepoint handler for sys_exit
 // https://elixir.bootlin.com/linux/v6.16/source/include/trace/events/syscalls.h#L46
 SEC("raw_tp/sys_exit")
-int sikte_raw_trace_point_at_exit(struct bpf_raw_tracepoint_args *ctx) {
+int sikte_raw_trace_point_at_exit(struct bpf_raw_tracepoint_args* ctx) {
     // Get current process/thread IDs
     __u64 pid_tgid = bpf_get_current_pid_tgid();
     pid_t tgid = pid_tgid >> 32;
@@ -90,8 +91,8 @@ int sikte_raw_trace_point_at_exit(struct bpf_raw_tracepoint_args *ctx) {
     __s64 syscall_ret = (long)ctx->args[1];
 
     // Reserve space in ring buffer
-    struct syscall_data *data = bpf_ringbuf_reserve(&SYSCALL_EVENTS,
-                                                      sizeof(struct syscall_data), 0);
+    struct syscall_data* data =
+        bpf_ringbuf_reserve(&SYSCALL_EVENTS, sizeof(struct syscall_data), 0);
     if (!data) {
         // Ring buffer full - drop event
         return 0;

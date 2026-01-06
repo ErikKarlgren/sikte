@@ -40,4 +40,4 @@ struct syscall_data {
     struct syscall_state state;
 } __attribute__((aligned(8)));
 
-#endif // __RAW_TRACE_POINTS_H
+#endif  // __RAW_TRACE_POINTS_H
