@@ -33,3 +33,7 @@ vmlinux = { git = "https://github.com/libbpf/vmlinux.h.git", rev = "991dd4b8dfd8
 [[bin]]
 name = "sikte"
 path = "src/main.rs"
+
+[dev-dependencies]
+nix = { version = "0.30.1", features = ["process"] }
+tokio = { workspace = true, features = ["time"] }

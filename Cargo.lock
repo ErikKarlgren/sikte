@@ -624,6 +624,7 @@ dependencies = [
  "libbpf-rs",
  "libc",
  "log",
+ "nix",
  "plain",
  "thiserror 2.0.16",
  "tokio",
