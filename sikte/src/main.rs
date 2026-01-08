@@ -92,6 +92,7 @@ fn bump_memlock_rlimit() {
     }
 }
 
+#[allow(unstable_name_collisions)]
 async fn add_pids_to_allowlist(
     target: TargetArgs,
     pid_allow_list: &PidAllowList<'_>,
