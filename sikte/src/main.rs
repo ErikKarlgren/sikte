@@ -1,27 +1,23 @@
-mod cli;
-mod common;
-mod ebpf;
-mod events;
-mod publishers;
-mod subscribers;
-
+use anyhow::anyhow;
+use itertools::Itertools;
+use libc::pid_t;
+use log::{debug, info};
+use sikte::{
+    cli::args::{Cli, Commands, RecordArgs, Target, TargetArgs},
+    ebpf::{
+        SikteEbpf,
+        map_types::{PidAllowList, SyscallRingBuf},
+    },
+    events::EventBus,
+    memlock_rlimit::bump_memlock_rlimit,
+    publishers::syscalls::{self, SyscallPublisher},
+    subscribers::ShellSubscriber,
+};
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
-
-use anyhow::anyhow;
-use cli::args::*;
-use ebpf::SikteEbpf;
-use events::EventBus;
-use itertools::Itertools;
-use libc::pid_t;
-use log::{debug, info};
-use publishers::syscalls::{self, SyscallPublisher};
-use subscribers::ShellSubscriber;
 use tokio::{process::Command, signal};
-
-use crate::ebpf::map_types::{PidAllowList, SyscallRingBuf};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -36,23 +32,23 @@ async fn main() -> anyhow::Result<()> {
     let mut event_bus = EventBus::new();
     event_bus.spawn_subscription(ShellSubscriber::new());
 
-    let mut child_process = None;
-
-    match args.command {
+    let child_process = match args.command {
         Commands::Record(RecordArgs { target }) => {
             let sys_enter = ebpf.attach_sys_enter_program()?;
             let sys_exit = ebpf.attach_sys_exit_program()?;
             let requirements = syscalls::Requirements::new(sys_enter, sys_exit);
 
             let pid_allow_list = PidAllowList::new(ebpf.pid_allow_list_map());
-            child_process = add_pids_to_allowlist(target, &pid_allow_list).await?;
+            let child_process = add_pids_to_allowlist(target, &pid_allow_list).await?;
 
             let ring_buf = SyscallRingBuf::new(ebpf.syscall_events_map());
             let tx = event_bus.tx();
             let publisher = SyscallPublisher::new(requirements, ring_buf, interrupted.clone(), tx)?;
             event_bus.spawn_publishment(publisher);
+
+            child_process
         }
-    }
+    };
 
     // Wait for either Ctrl-C or child process completion
     println!("Waiting for Ctrl-C...");
@@ -77,19 +73,6 @@ async fn main() -> anyhow::Result<()> {
     interrupted.store(true, Ordering::Release);
 
     Ok(())
-}
-
-/// Bump the memlock rlimit. This is needed for older kernels that don't use the
-/// new memcg based accounting, see https://lwn.net/Articles/837122/
-fn bump_memlock_rlimit() {
-    let rlim = libc::rlimit {
-        rlim_cur: libc::RLIM_INFINITY,
-        rlim_max: libc::RLIM_INFINITY,
-    };
-    let ret = unsafe { libc::setrlimit(libc::RLIMIT_MEMLOCK, &rlim) };
-    if ret != 0 {
-        debug!("remove limit on locked memory failed, ret is: {ret}");
-    }
 }
 
 #[allow(unstable_name_collisions)]
