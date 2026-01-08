@@ -4,15 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Sikte** is an eBPF-based syscall tracer for Linux with CO-RE (Compile Once, Run Everywhere) support. It captures system calls from running processes, calculates timing information, and provides detailed execution analysis. The tool can either trace specific PIDs or execute commands and trace their syscalls.
+**Sikte** is an eBPF-based performance tracer for Linux with CO-RE (Compile Once, Run Everywhere) support. It captures system calls from running processes, calculates timing information, and provides detailed execution analysis. The tool can either trace specific PIDs or execute commands and trace their syscalls.
 
 ## Build & Run Commands
 
+### Development (main commands)
+```bash
+# Format, then run check and clippy
+just check
+# Auto-fix clippy warnings, format, and commit
+just fix
+```
+
 ### Standard Build
 ```bash
-cargo build          # Debug build
-cargo build --release  # Release build
-cargo check && cargo clippy  # Check + lint
+# For actually building the binary
+just build
+# For actually building the binary in release mode
+just build-release
 ```
 
 ### Running (requires root)
@@ -22,26 +31,20 @@ just run [args]
 
 # Run with custom log level
 just run-log debug [args]
-
-# Or use cargo directly
-RUST_BACKTRACE=1 RUST_LOG=info cargo run --config 'target."cfg(all())".runner="sudo -E"' -- record --syscalls --command ls
 ```
 
 ### Testing
 ```bash
-just test            # Run all tests
-just dbg-test [args] # Debug specific test with rust-gdb
-```
-
-### Development
-```bash
-just check           # Run clippy
-just fix             # Auto-fix clippy warnings, format, and commit
+# Run all tests
+just test
+# Debug specific test with rust-gdb
+just dbg-test [args]
 ```
 
 ### System Verification
 ```bash
-just check-system    # Verify kernel eBPF support and capabilities
+# Verify kernel eBPF support and capabilities
+just check-system
 ```
 
 ## Prerequisites
@@ -134,7 +137,7 @@ This project uses libbpf-rs and CO-RE for kernel portability:
 
 ## Build System
 
-The build process uses libbpf-cargo instead of aya-build:
+The build process uses libbpf-cargo:
 
 1. **sikte/build.rs**: Uses `SkeletonBuilder` to:
    - Compile C eBPF programs with clang
