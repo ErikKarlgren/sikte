@@ -21,7 +21,7 @@ run-log log_level *args: build
     RUST_BACKTRACE=1 RUST_LOG={{log_level}} cargo run --config 'target."cfg(all())".runner="sudo -E"' -- {{args}}
 
 test:
-    RUST_BACKTRACE=1 cargo test
+    RUST_BACKTRACE=1 sudo -E cargo test
 
 dbg-test *args:
     CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=rust-gdb cargo test {{args}}
