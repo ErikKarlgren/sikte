@@ -20,7 +20,7 @@ COPY sikte/Cargo.toml ./sikte/
 RUN cargo fetch
 
 # Copy source code
-COPY sikte/ .
+COPY . .
 
 # Build the application in release mode with a locked Cargo.lock
 RUN cargo build --all-targets --all-features --release --locked
