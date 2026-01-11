@@ -9,11 +9,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run Commands
 
 ### Development (main commands)
+You will use the following command all the time for ensuring everything compiles, checking linter issues, ...
 ```bash
 # Format, then run check and clippy
-just check
-# Auto-fix clippy warnings, format, and commit
-just fix
+just
 ```
 
 ### Standard Build
@@ -75,7 +74,7 @@ Main binary that orchestrates eBPF program loading, data collection, and event h
 - `common/`: C-compatible types shared between kernel and userspace
   - `constants/`: Program names and attachment point constants
   - `generic_types.rs`: Generic types for eBPF maps
-  - `raw_tracepoints/syscalls.rs`: SyscallData, SyscallState, SyscallStateTag types
+  - `generated_types.rs`: Generated SyscallData, SyscallState types from C skeleton
 - `ebpf/`: eBPF program lifecycle management (skeleton-based loading, attaching, maps)
   - `sikte_ebpf.rs`: Skeleton-based loader with CO-RE support
   - `map_types.rs`: Wrappers for libbpf-rs maps
@@ -86,13 +85,12 @@ Main binary that orchestrates eBPF program loading, data collection, and event h
 - `subscribers/`: Consume events (ShellSubscriber for stdout)
 - `syscall_table/`: Maps syscall IDs to names (x86_64 only)
 
-**C eBPF programs (sikte/ebpf-src/):**
+**C eBPF programs (sikte/src/bpf/):**
 C eBPF programs that run in kernel space, attached to raw tracepoints.
 
 **Files:**
-- `raw_trace_points.bpf.c`: C eBPF programs with CO-RE support
-- `raw_trace_points.h`: C header with shared type definitions (includes vmlinux.h)
-- `vmlinux/vmlinux.h`: Generated kernel type definitions for CO-RE
+- `sikte.bpf.c`: C eBPF programs with CO-RE support
+- `sikte.h`: C header with shared type definitions (includes vmlinux.h)
 
 **Programs:**
 - `sikte_raw_trace_point_at_enter`: Captures syscall entry (sys_enter tracepoint)
@@ -146,7 +144,7 @@ The build process uses libbpf-cargo:
 
 2. **Skeleton-based loading**:
    - Generated skeleton provides type-safe map and program access
-   - `RawTracePointsSkel::open()` parses eBPF object
+   - `SikteSkel::open()` parses eBPF object
    - `.load()` applies CO-RE relocations and loads into kernel
    - `.attach()` attaches all programs to tracepoints
 
@@ -181,9 +179,9 @@ The project uses a multi-publisher, multi-consumer architecture:
 3. Register subscriber in `main.rs` via `event_bus.add_subscriber()`
 
 ### Adding a New eBPF Program
-1. Add program to `sikte/ebpf-src/raw_trace_points.bpf.c`
+1. Add program to `sikte/src/bpf/sikte.bpf.c`
 2. Define any new maps with proper SEC(".maps") annotations
-3. If sharing data with userspace, add types to `sikte/src/common/` and `sikte/ebpf-src/raw_trace_points.h`
+3. If sharing data with userspace, add types to `sikte/src/common/` and `sikte/src/bpf/sikte.h`
 4. Create a publisher in `sikte/src/publishers/` using `RingBufferBuilder`
 5. Update `sikte/src/ebpf/sikte_ebpf.rs` to expose new maps
 
@@ -228,4 +226,3 @@ Currently only x86_64 is supported. To add another architecture:
 - Verify BTF: `ls -lh /sys/kernel/btf/vmlinux`
 - View loaded eBPF programs: `sudo bpftool prog list`
 - Check for BPF verifier errors: `dmesg | tail`
-- Inspect CO-RE relocations: `llvm-objdump -d sikte/ebpf-src/*.o`

@@ -91,16 +91,16 @@ impl SikteEbpf {
     }
 }
 
-/// Represents that the 'sys_enter' program has been loaded into the kernel. When dropped, deattach
+/// Represents that the 'sys_enter' program has been loaded into the kernel. When dropped, detach
 /// it
 pub struct SysEnterProgram {
     /// Private field that contains the link to `sys_enter`
     _link: Link,
 }
 
-/// Represents that the 'sys_exit' program has been loaded into the kernel. When dropped, deattach
+/// Represents that the 'sys_exit' program has been loaded into the kernel. When dropped, detach
 /// it
 pub struct SysExitProgram {
-    /// Private field that contains the link to `sys_enter`
+    /// Private field that contains the link to `sys_exit`
     _link: Link,
 }

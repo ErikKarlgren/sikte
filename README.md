@@ -23,19 +23,19 @@ An eBPF-based syscall tracer with CO-RE (Compile Once, Run Everywhere) support.
 Build the project:
 
 ```shell
-cargo build --release
+just build-release
 ```
 
 Run with root privileges (required for eBPF):
 
 ```shell
-sudo ./target/release/sikte record --syscalls --command ls
+sudo ./target/release/sikte record --command ls
 ```
 
 Or use cargo directly:
 
 ```shell
-cargo run --release --config 'target."cfg(all())".runner="sudo -E"' -- record --syscalls --command ls
+cargo run --release --config 'target."cfg(all())".runner="sudo -E"' -- record --command ls
 ```
 
 ## CO-RE Support
