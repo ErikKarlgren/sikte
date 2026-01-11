@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use libc::pid_t;
-use log::trace;
+use log::{trace, warn};
 
 use super::EventSubscriber;
 use crate::{
@@ -60,31 +60,27 @@ impl EventSubscriber for ShellSubscriber {
             }
             syscall_state_tag::AT_EXIT => {
                 trace!("sys_exit: pid {pid}, tid {tid}");
+
                 match self.thr_to_last_sys_enter.remove(&tid) {
-                    None => {
-                        println!("({pid}/{tid}) ??? (took ??? us)");
-                    }
                     Some(last_data) => match last_data.state.syscall_id() {
                         Some(syscall_id) => {
                             let syscall_name = SyscallID::try_from(syscall_id)
                                 .map(|id| id.as_str())
                                 .unwrap_or("???");
-                            let time_ns = timestamp - last_data.timestamp;
+                            let time_ns = timestamp.saturating_sub(last_data.timestamp);
                             let time_us = time_ns as f64 / 1000f64;
                             println!("({pid}/{tid}) {syscall_name} (took {time_us:.2} us)");
                             self.total_syscalls_time += time_us;
                         }
-                        None => {
-                            unreachable!(
-                                "only syscall_state_tag::AT_ENTER can be stored in self.thr_to_last_sys_enter"
-                            );
-                        }
+                        None => warn!("Unexpected non-AT_ENTER stored for tid {tid}"),
                     },
+                    None => println!("({pid}/{tid}) ??? (took ??? us)"),
                 }
             }
-            _ => {
-                // Unknown state tag
-            }
+            _ => trace!(
+                "Unknown syscall state tag {} for pid {pid}, tid {tid}",
+                state.tag
+            ),
         }
     }
 }
