@@ -10,7 +10,7 @@ use sikte::{
     },
     events::EventBus,
     memlock_rlimit::bump_memlock_rlimit,
-    publishers::syscalls::SyscallPublisher,
+    publishers::syscalls::{self, SyscallID, SyscallPublisher},
     subscribers::EventSubscriber,
 };
 use std::{
@@ -76,7 +76,7 @@ async fn trace_child_process_read_syscall() {
                 .attach_sys_exit_program()
                 .expect("Failed to attach sys_exit program");
 
-            let requirements = sikte::publishers::syscalls::Requirements::new(sys_enter, sys_exit);
+            let requirements = syscalls::Requirements::new(sys_enter, sys_exit);
             let ring_buf = SyscallRingBuf::new(ebpf.syscall_events_map());
             let tx = event_bus.tx();
             let publisher = SyscallPublisher::new(requirements, ring_buf, interrupted.clone(), tx)
@@ -103,8 +103,7 @@ async fn trace_child_process_read_syscall() {
             let read_syscall_found = syscalls.iter().any(|s| {
                 if s.state.tag == syscall_state_tag::AT_ENTER {
                     let enter_data = unsafe { s.state.data.at_enter };
-                    // Syscall number for read is 0 on x86_64
-                    enter_data.syscall_id == 0
+                    enter_data.syscall_id == SyscallID::read as i64
                 } else {
                     false
                 }

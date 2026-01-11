@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
-use crate::common::generated_types::{SyscallData, SyscallStateExt, syscall_state_tag};
-use libc::pid_t;
-use log::{debug, trace};
-
 use super::EventSubscriber;
-use crate::publishers::syscalls::to_syscall_name;
+use crate::{
+    common::generated_types::{SyscallData, SyscallStateExt, syscall_state_tag},
+    publishers::syscalls::SyscallID,
+};
+use libc::pid_t;
+use log::trace;
 
 /// Event Subscriber that writes to stdout
 pub struct ShellSubscriber {
@@ -55,7 +56,9 @@ impl EventSubscriber for ShellSubscriber {
                     Some(last_data) => {
                         if last_data.state.tag == syscall_state_tag::AT_ENTER {
                             let syscall_id = last_data.state.syscall_id().unwrap();
-                            let syscall_name = to_syscall_name(syscall_id).unwrap_or("UNKNOWN");
+                            let syscall_name = SyscallID::try_from(syscall_id)
+                                .map(|id| id.as_str())
+                                .unwrap_or("???");
                             let time_ns = timestamp - last_data.timestamp;
                             let time_us = time_ns as f64 / 1000f64;
                             println!("({pid}/{tid}) {syscall_name} (took {time_us} us)");
