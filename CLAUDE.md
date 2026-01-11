@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run Commands
 
 ### Development (main commands)
-You will use the following command all the time for ensuring everything compiles, checking linter issues, ...
+You will use the following command most of the time for ensuring everything compiles, checking linter issues, ...
 ```bash
 # Format, then run check and clippy
 just
@@ -102,7 +102,7 @@ C eBPF programs that run in kernel space, attached to raw tracepoints.
 
 ## Data Flow
 
-```
+```text
 Kernel Space:
   sys_enter/sys_exit raw tracepoints
          ↓
