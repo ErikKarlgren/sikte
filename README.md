@@ -60,7 +60,7 @@ This project uses dual licensing due to Linux kernel compatibility requirements:
 
 ### Userspace Code (Rust)
 All Rust code in `sikte/src/` (excluding `sikte/src/bpf/`) is licensed under:
-- **AGPL-3.0-or-later** - [GNU Affero General Public License v3.0 or later](./LICENSE-AGPLv3)
+- **AGPL-3.0-or-later** - [GNU Affero General Public License v3.0 or later](./LICENSE)
 
 ### Kernel-space Code (eBPF)
 eBPF programs in `sikte/src/bpf/` must be GPL-compatible to load into the Linux kernel:
