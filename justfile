@@ -2,17 +2,15 @@
 
 default: check
 
-format:
+check:
     clang-format -i sikte/src/bpf/sikte.bpf.c sikte/src/bpf/sikte.h
-    cargo fmt
+    cargo +nightly fmt --all
+    cargo clippy --all-targets --all-features --fix --allow-dirty -- -D warnings
 
-check: format
-    cargo clippy --all-targets --all-features -- -D warnings
-
-build: format
+build: check
     cargo build --all-targets --all-features
 
-build-release: format
+build-release: check
     cargo build --all-targets --all-features --release --locked
 
 test: build
@@ -45,12 +43,6 @@ docker-clean:
 
 
 ### OTHER COMMANDS ###
-
-fix: format
-    cargo clippy --fix
-    git add .
-    git commit -m "chore(clippy): run fixes"
-
 check-system:
     @echo "Checking eBPF system requirements..."
     # Kernel version:
