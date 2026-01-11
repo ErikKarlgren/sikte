@@ -7,7 +7,6 @@ use std::time::Duration;
 use crate::common::generated_types::SyscallData;
 use anyhow::anyhow;
 use log::{error, warn};
-use plain::Plain;
 use tokio::sync::broadcast::Sender;
 
 use crate::{
@@ -59,13 +58,13 @@ impl SyscallPublisher {
                 Ok(()) => {
                     // Send to event bus
                     if let Err(e) = tx.send(Event::Syscall(syscall_data)) {
-                        error!("Failed to send syscall event: {}", e);
+                        error!("Failed to send syscall event: {e}");
                         return -1;
                     }
                     0
                 }
                 Err(e) => {
-                    warn!("Failed to parse syscall data: {:?}", e);
+                    warn!("Failed to parse syscall data: {e:?}");
                     -1
                 }
             }

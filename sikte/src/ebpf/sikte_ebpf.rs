@@ -3,7 +3,7 @@ use std::mem::MaybeUninit;
 use crate::common::constants::{attach_points::*, program_names::*};
 use libbpf_rs::{
     Link,
-    skel::{OpenSkel, Skel, SkelBuilder},
+    skel::{OpenSkel, SkelBuilder},
 };
 use log::debug;
 
@@ -50,10 +50,7 @@ impl SikteEbpf {
 
     /// Attach sys_enter raw tracepoint
     pub fn attach_sys_enter_program(&mut self) -> Result<SysEnterProgram, EbpfError> {
-        debug!(
-            "Attaching {} program to {}",
-            SIKTE_RAW_TRACE_POINT_AT_ENTER, SYS_ENTER
-        );
+        debug!("Attaching {SIKTE_RAW_TRACE_POINT_AT_ENTER} program to {SYS_ENTER}");
 
         let link = self
             .skel
@@ -70,10 +67,7 @@ impl SikteEbpf {
 
     /// Attach sys_exit raw tracepoint
     pub fn attach_sys_exit_program(&mut self) -> Result<SysExitProgram, EbpfError> {
-        debug!(
-            "Attaching {} program to {}",
-            SIKTE_RAW_TRACE_POINT_AT_EXIT, SYS_EXIT
-        );
+        debug!("Attaching {SIKTE_RAW_TRACE_POINT_AT_EXIT} program to {SYS_EXIT}");
 
         let link = self
             .skel

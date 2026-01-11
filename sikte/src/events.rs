@@ -20,6 +20,12 @@ pub struct EventBus {
     join_handles: Vec<JoinHandle<()>>,
 }
 
+impl Default for EventBus {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EventBus {
     /// Create a new `EventBus`
     pub fn new() -> EventBus {

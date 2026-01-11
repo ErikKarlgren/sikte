@@ -16,6 +16,12 @@ pub struct ShellSubscriber {
     total_syscalls_time: f64,
 }
 
+impl Default for ShellSubscriber {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShellSubscriber {
     pub fn new() -> ShellSubscriber {
         ShellSubscriber {

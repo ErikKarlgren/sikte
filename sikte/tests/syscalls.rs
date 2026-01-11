@@ -90,7 +90,7 @@ async fn trace_child_process_read_syscall() {
                     assert_eq!(pid, child);
                     assert_eq!(status, 0);
                 }
-                other => panic!("Expected child to exit gracefully, got {:?}", other),
+                other => panic!("Expected child to exit gracefully, got {other:?}"),
             }
             tokio::time::sleep(Duration::from_millis(250)).await; // Allow time for events to propagate
 

@@ -4,7 +4,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum EbpfError {
     #[error("Problem when loading eBPF program {}: {}", program, source)]
-    LoadError {
+    Load {
         program: &'static str,
         source: libbpf_rs::Error,
     },
@@ -14,18 +14,18 @@ pub enum EbpfError {
         attach_target,
         source
     )]
-    AttachError {
+    Attach {
         program: &'static str,
         attach_target: &'static str,
         source: libbpf_rs::Error,
     },
     #[error("libbpf error: {0}")]
-    LibbpfError(#[from] libbpf_rs::Error),
+    Libbpf(#[from] libbpf_rs::Error),
 }
 
 impl EbpfError {
     pub fn as_load_error(error: libbpf_rs::Error, program: &'static str) -> EbpfError {
-        EbpfError::LoadError {
+        EbpfError::Load {
             program,
             source: error,
         }
@@ -36,7 +36,7 @@ impl EbpfError {
         program: &'static str,
         attach_target: &'static str,
     ) -> EbpfError {
-        EbpfError::AttachError {
+        EbpfError::Attach {
             program,
             attach_target,
             source: error,

@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use itertools::Itertools;
 use libc::pid_t;
-use log::{debug, info};
+use log::info;
 use sikte::{
     cli::args::{Cli, Commands, RecordArgs, Target, TargetArgs},
     ebpf::{
@@ -60,8 +60,8 @@ async fn main() -> anyhow::Result<()> {
             }
             result = child.wait() => {
                 match result {
-                    Ok(status) => println!("Traced process exited with status: {}", status),
-                    Err(e) => eprintln!("Error waiting for child process: {}", e),
+                    Ok(status) => println!("Traced process exited with status: {status}"),
+                    Err(e) => eprintln!("Error waiting for child process: {e}"),
                 }
             }
         }
