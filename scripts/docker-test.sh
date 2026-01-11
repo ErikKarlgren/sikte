@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 docker_tag="sikte-builder"
 docker_output_dir="/output"
 
