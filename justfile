@@ -37,6 +37,9 @@ uninstall-local:
 docker-build:
     ./scripts/docker-build.sh
 
+docker-test:
+    ./scripts/docker-test.sh
+
 docker-clean:
     docker image rm sikte-builder || true
     docker system prune -f
