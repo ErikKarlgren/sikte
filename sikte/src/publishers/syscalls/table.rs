@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-#[cfg(target_arch = "x86_64")]
+#[cfg(not(target_arch = "x86_64"))]
+compile_error!("non supported architecture");
+
 #[derive(Debug, Clone, Copy)]
 #[allow(non_camel_case_types)]
 #[repr(i64)] // Same data representation as in the kernel
@@ -879,11 +881,6 @@ const fn build_syscall_id_to_name_table() -> [&'static str; MAX_NUM_SYSCALLS] {
     t
 }
 
-#[cfg(not(target_arch = "x86_64"))]
-const fn build_syscall_table() -> [&'static str; MAX_NUM_SYSCALLS] {
-    compile_error!("non supported architecture");
-}
-
 #[cfg(target_arch = "x86_64")]
 const fn build_id_to_syscall_table() -> [Option<SyscallID>; MAX_NUM_SYSCALLS] {
     let mut t: [Option<SyscallID>; MAX_NUM_SYSCALLS] = [None; MAX_NUM_SYSCALLS];
@@ -1306,9 +1303,4 @@ const fn build_id_to_syscall_table() -> [Option<SyscallID>; MAX_NUM_SYSCALLS] {
     t[SyscallID::pwritev2_x32 as usize] = Some(SyscallID::pwritev2_x32);
 
     t
-}
-
-#[cfg(not(target_arch = "x86_64"))]
-const fn build_id_to_syscall_table() -> [Option<SyscallID>; MAX_NUM_SYSCALLS] {
-    compile_error!("non supported architecture");
 }
