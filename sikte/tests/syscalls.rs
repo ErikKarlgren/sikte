@@ -14,7 +14,7 @@ use nix::{
     unistd::{ForkResult, fork},
 };
 use sikte::{
-    common::generated_types::{SyscallData, syscall_state_tag},
+    common::generated_types::{SyscallData, SyscallStateExt},
     ebpf::{
         SikteEbpf,
         map_types::{PidAllowList, SyscallRingBuf},
@@ -103,12 +103,9 @@ async fn trace_child_process_read_syscall() {
             // 4. Assert that at least one read syscall was made
             let syscalls = subscriber.syscalls.lock().unwrap();
             let read_syscall_found = syscalls.iter().any(|s| {
-                if s.state.tag == syscall_state_tag::AT_ENTER {
-                    let enter_data = unsafe { s.state.data.at_enter };
-                    enter_data.syscall_id == SyscallID::read as i64
-                } else {
-                    false
-                }
+                s.state
+                    .syscall_id()
+                    .is_some_and(|id| id == SyscallID::read as i64)
             });
 
             assert!(
