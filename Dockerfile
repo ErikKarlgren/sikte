@@ -7,6 +7,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN rustup toolchain install stable && \
+    rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt && \
     rustup override set 1.92.0 && \
     rustup component add rustfmt
 
