@@ -8,8 +8,8 @@ license = "AGPL-3.0-or-later"
 edition = "2024"
 
 [workspace.dependencies]
-libbpf-rs = { version = "0.24", default-features = false }
-libbpf-cargo = { version = "0.24", default-features = false }
+libbpf-rs = { version = "0.25", default-features = false }
+libbpf-cargo = { version = "0.25", default-features = false }
 
 anyhow = { version = "1", default-features = false }
 bytemuck = { version = "1.23.2", default-features = false }
