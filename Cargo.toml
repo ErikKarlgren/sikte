@@ -1,21 +1,19 @@
 [workspace]
 resolver = "2"
-members = ["sikte", "sikte-common", "sikte-ebpf"]
-default-members = ["sikte", "sikte-common"]
+members = ["sikte"]
+default-members = ["sikte"]
 
 [workspace.package]
-license = "MIT OR Apache-2.0"
+license = "AGPL-3.0-or-later"
 edition = "2024"
 
 [workspace.dependencies]
-aya = { version = "0.13.1", default-features = false }
-aya-build = { version = "0.1.2", default-features = false }
-aya-ebpf = { version = "0.1.1", default-features = false }
-aya-log = { version = "0.2.1", default-features = false }
-aya-log-ebpf = { version = "0.1.1", default-features = false }
+libbpf-rs = { version = "0.25", default-features = false }
+libbpf-cargo = { version = "0.25", default-features = false }
 
 anyhow = { version = "1", default-features = false }
-bytemuck = { version = "1.23.2", default-features = false }
+plain = { version = "0.2", default-features = false }
+
 # `std` feature is currently required to build `clap`.
 #
 # See https://github.com/clap-rs/clap/blob/61f5ee5/clap_builder/src/lib.rs#L15.
@@ -36,6 +34,6 @@ thiserror = { version = "2.0.16", default-features = false }
 tokio = { version = "1.40.0", default-features = false }
 which = { version = "6.0.0", default-features = false }
 
-[profile.release.package.sikte-ebpf]
+[profile.release]
 debug = 2
 codegen-units = 1

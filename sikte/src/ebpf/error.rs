@@ -1,13 +1,13 @@
-use aya::programs::ProgramError;
+// SPDX-License-Identifier: AGPL-3.0-or-later
 use thiserror::Error;
 
 /// Error that may happen while dealing with eBPF
 #[derive(Error, Debug)]
 pub enum EbpfError {
     #[error("Problem when loading eBPF program {}: {}", program, source)]
-    LoadError {
+    Load {
         program: &'static str,
-        source: ProgramError,
+        source: libbpf_rs::Error,
     },
     #[error(
         "Problem when attaching eBPF program {} to {}: {}",
@@ -15,26 +15,29 @@ pub enum EbpfError {
         attach_target,
         source
     )]
-    AttachError {
+    Attach {
         program: &'static str,
         attach_target: &'static str,
-        source: ProgramError,
+        source: libbpf_rs::Error,
     },
+    #[error("libbpf error: {0}")]
+    Libbpf(#[from] libbpf_rs::Error),
 }
 
 impl EbpfError {
-    pub fn as_load_error(error: ProgramError, program: &'static str) -> EbpfError {
-        EbpfError::LoadError {
+    pub fn as_load_error(error: libbpf_rs::Error, program: &'static str) -> EbpfError {
+        EbpfError::Load {
             program,
             source: error,
         }
     }
+
     pub fn as_attach_error(
-        error: ProgramError,
+        error: libbpf_rs::Error,
         program: &'static str,
         attach_target: &'static str,
     ) -> EbpfError {
-        EbpfError::AttachError {
+        EbpfError::Attach {
             program,
             attach_target,
             source: error,

@@ -6,17 +6,14 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-sikte-common = { path = "../sikte-common", features = ["user"] }
-
 anyhow = { workspace = true, default-features = true }
-aya = { workspace = true }
-aya-log = { workspace = true }
-bytemuck = { workspace = true }
+libbpf-rs = { workspace = true }
 clap = { workspace = true }
 env_logger = { workspace = true }
 itertools = { workspace = true }
 libc = { workspace = true }
 log = { workspace = true }
+plain = { workspace = true }
 tokio = { workspace = true, features = [
     "macros",
     "net",
@@ -29,22 +26,13 @@ tokio = { workspace = true, features = [
 thiserror = { workspace = true }
 
 [build-dependencies]
-anyhow = { workspace = true }
-aya-build = { workspace = true }
-# TODO(https://github.com/rust-lang/cargo/issues/12375): this should be an artifact dependency, but
-# it's not possible to tell cargo to use `-Z build-std` to build it. We cargo-in-cargo in the build
-# script to build this, but we want to teach cargo about the dependecy so that cache invalidation
-# works properly.
-#
-# Note also that https://github.com/rust-lang/cargo/issues/10593 occurs when `target = ...` is added
-# to an artifact dependency; it seems possible to work around that by setting `resolver = "1"` in
-# Cargo.toml in the workspace root.
-#
-# Finally note that *any* usage of `artifact = ...` in *any* Cargo.toml in the workspace breaks
-# workflows with stable cargo; stable cargo outright refuses to load manifests that use unstable
-# features.
-sikte-ebpf = { path = "../sikte-ebpf" }
+libbpf-cargo = { workspace = true }
+vmlinux = { git = "https://github.com/libbpf/vmlinux.h.git", rev = "991dd4b8dfd8c9d62ce8999521b24f61d9b7fc52" }
 
 [[bin]]
 name = "sikte"
 path = "src/main.rs"
+
+[dev-dependencies]
+nix = { version = "0.30.1", features = ["process"] }
+tokio = { workspace = true, features = ["time"] }

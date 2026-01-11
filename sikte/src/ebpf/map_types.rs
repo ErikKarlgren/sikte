@@ -1,16 +1,43 @@
-use aya::maps::{HashMap, MapData, MapError, RingBuf};
+// SPDX-License-Identifier: AGPL-3.0-or-later
+use libbpf_rs::MapCore;
 use libc::pid_t;
-use sikte_common::generic_types::Unused;
 
-/// Syscall ring buffer
-pub struct SyscallRingBuf(pub RingBuf<MapData>);
+use crate::common::generic_types::Unused;
 
-/// PID allow list. It uses an ebpf hashmap internally, where the value is unused
-pub struct PidAllowList<'ebpf>(pub HashMap<&'ebpf mut MapData, pid_t, Unused>);
+/// Syscall ring buffer wrapper
+pub struct SyscallRingBuf<'a> {
+    map: &'a libbpf_rs::Map<'a>,
+}
 
-impl PidAllowList<'_> {
+impl<'a> SyscallRingBuf<'a> {
+    pub fn new(map: &'a libbpf_rs::Map<'a>) -> Self {
+        SyscallRingBuf { map }
+    }
+
+    /// Get reference to the underlying map
+    pub fn map(&self) -> &libbpf_rs::Map<'a> {
+        self.map
+    }
+}
+
+/// PID allow list wrapper. It uses an eBPF hashmap internally, where the value is unused.
+pub struct PidAllowList<'a> {
+    map: &'a libbpf_rs::Map<'a>,
+}
+
+impl<'a> PidAllowList<'a> {
+    pub fn new(map: &'a libbpf_rs::Map<'a>) -> Self {
+        PidAllowList { map }
+    }
+
     /// Insert a PID into the allowlist
-    pub fn insert(&mut self, pid: pid_t) -> Result<(), MapError> {
-        self.0.insert(pid, 0, 0)
+    pub fn insert(&self, pid: pid_t) -> Result<(), libbpf_rs::Error> {
+        let key = pid.to_ne_bytes();
+        let value: Unused = 0;
+        let value_bytes = value.to_ne_bytes();
+
+        self.map
+            .update(&key, &value_bytes, libbpf_rs::MapFlags::ANY)?;
+        Ok(())
     }
 }

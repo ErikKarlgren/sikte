@@ -1,40 +1,71 @@
 # sikte
 
+An eBPF-based syscall tracer with CO-RE (Compile Once, Run Everywhere) support.
+
 ## Prerequisites
 
-1. stable rust toolchains: `rustup toolchain install stable`
-1. nightly rust toolchains: `rustup toolchain install nightly --component rust-src`
-1. (if cross-compiling) rustup target: `rustup target add ${ARCH}-unknown-linux-musl`
-1. (if cross-compiling) LLVM: (e.g.) `brew install llvm` (on macOS)
-1. (if cross-compiling) C toolchain: (e.g.) [`brew install filosottile/musl-cross/musl-cross`](https://github.com/FiloSottile/homebrew-musl-cross) (on macOS)
-1. bpf-linker: `cargo install bpf-linker` (`--no-default-features` on macOS)
+1. **Rust toolchains**:
+   - Stable: `rustup toolchain install stable`
+   - Nightly: `rustup toolchain install nightly --component rust-src`
+
+2. **eBPF development tools**:
+   - clang/LLVM for compiling C eBPF programs
+   - libbpf development headers: `apt-get install libbpf-dev`
+   - just (command runner): `cargo install just` or via package manager
+
+3. **Kernel requirements**:
+   - Linux kernel 5.8+ with BTF enabled
+   - Verify BTF is available: `ls /sys/kernel/btf/vmlinux`
+   - CONFIG_DEBUG_INFO_BTF=y in kernel config
 
 ## Build & Run
 
-Use `cargo build`, `cargo check`, etc. as normal. Run your program with:
+Build the project:
 
 ```shell
-cargo run --release --config 'target."cfg(all())".runner="sudo -E"'
+just build-release
 ```
 
-Cargo build scripts are used to automatically build the eBPF correctly and include it in the
-program.
-
-## Cross-compiling on macOS
-
-Cross compilation should work on both Intel and Apple Silicon Macs.
+Run with root privileges (required for eBPF):
 
 ```shell
-CC=${ARCH}-linux-musl-gcc cargo build --package sikte --release \
-  --target=${ARCH}-unknown-linux-musl \
-  --config=target.${ARCH}-unknown-linux-musl.linker=\"${ARCH}-linux-musl-gcc\"
+sudo ./target/release/sikte record --command ls
 ```
-The cross-compiled program `target/${ARCH}-unknown-linux-musl/release/sikte` can be
-copied to a Linux server or VM and run there.
+
+Or use cargo directly:
+
+```shell
+cargo run --release --config 'target."cfg(all())".runner="sudo -E"' -- record --command ls
+```
+
+## CO-RE Support
+
+This project uses libbpf-rs and CO-RE, which means:
+- A single compiled binary works across different kernel versions (5.8+)
+- Automatic field offset relocations based on kernel BTF
+- No need to recompile for different kernel configurations
+
+The vmlinux.h header is sourced from [libbpf's github repo](https://github.com/libbpf/vmlinux.h.git)
+
+## Development
+
+Cargo build scripts automatically:
+1. Compile C eBPF programs using clang
+2. Generate Rust skeleton bindings via libbpf-cargo
+3. Embed eBPF bytecode in the final binary
 
 ## License
 
-All code is distributed under the terms of the [GNU General Public License, 
-Version 2].
+This project uses dual licensing due to Linux kernel compatibility requirements:
 
-[GNU General Public License, Version 2]: LICENSE
+### Userspace Code (Rust)
+All Rust code in `sikte/src/` (excluding `sikte/src/bpf/`) is licensed under:
+- **AGPL-3.0-or-later** - [GNU Affero General Public License v3.0 or later](./LICENSE)
+
+### Kernel-space Code (eBPF)
+eBPF programs in `sikte/src/bpf/` must be GPL-compatible to load into the Linux kernel:
+- **GPL-2.0-or-later** - [GNU General Public License v2.0 or later](./LICENSE-GPLv2)
+
+Each source file includes an SPDX license identifier header indicating which license applies. See [LICENSE](LICENSE) for the full AGPL-3.0 license text (userspace code).
+
+For more information, check [A Practical Guide to eBPF Licensing](https://ebpf.io/blog/ebpf-licensing-guide/)

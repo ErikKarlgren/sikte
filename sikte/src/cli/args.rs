@@ -1,9 +1,10 @@
-use clap::{Args, CommandFactory, Parser, Subcommand};
+// SPDX-License-Identifier: AGPL-3.0-or-later
+use clap::{Args, Parser, Subcommand};
 use log::debug;
 
 #[derive(Debug, Parser)]
 #[command(name = "sikte")]
-#[command(about = "A tracing tool for syscalls and perf events")]
+#[command(about = "A tracing tool for syscalls")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -13,25 +14,7 @@ impl Cli {
     /// Parse args and do some checks
     pub fn parse_args() -> Self {
         let args = Cli::parse();
-
-        if let Commands::Record(RecordArgs {
-            options:
-                TracingOptions {
-                    syscalls: false,
-                    perf_events: false,
-                },
-            ..
-        }) = args.command
-        {
-            Cli::command()
-                .error(
-                    clap::error::ErrorKind::TooFewValues,
-                    "You need to set what to trace!",
-                )
-                .exit();
-        }
-
-        debug!("parsing args succeded");
+        debug!("parsing args succeeded");
         args
     }
 }
@@ -46,9 +29,6 @@ pub enum Commands {
 pub struct RecordArgs {
     #[command(flatten)]
     pub target: TargetArgs,
-
-    #[command(flatten)]
-    pub options: TracingOptions,
 }
 
 #[derive(Debug, Args)]
@@ -78,15 +58,4 @@ impl TargetArgs {
 pub enum Target {
     Pid(Vec<i32>),
     Command(Vec<String>),
-}
-
-#[derive(Debug, Args)]
-pub struct TracingOptions {
-    /// Trace syscalls
-    #[arg(long)]
-    pub syscalls: bool,
-
-    /// Trace perf events
-    #[arg(long)]
-    pub perf_events: bool,
 }

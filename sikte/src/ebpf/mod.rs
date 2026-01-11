@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 mod error;
 pub mod map_types;
 mod sikte_ebpf;

@@ -1,11 +1,13 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 use log::{debug, error};
-use sikte_common::raw_tracepoints::syscalls::SyscallData;
 use tokio::{
     sync::broadcast::{Receiver, Sender, error::RecvError},
     task::JoinHandle,
 };
 
-use crate::{publishers::EventPublisher, subscribers::EventSubscriber};
+use crate::{
+    common::generated_types::SyscallData, publishers::EventPublisher, subscribers::EventSubscriber,
+};
 
 /// Enum for representing all the possible eBPF events in this program
 #[derive(Clone)]
@@ -20,6 +22,12 @@ pub struct EventBus {
     join_handles: Vec<JoinHandle<()>>,
 }
 
+impl Default for EventBus {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EventBus {
     /// Create a new `EventBus`
     pub fn new() -> EventBus {
@@ -28,6 +36,11 @@ impl EventBus {
             sender,
             join_handles: vec![],
         }
+    }
+
+    /// Get a sender to publish events to the bus
+    pub fn tx(&self) -> Sender<Event> {
+        self.sender.clone()
     }
 
     /// Spawn a publishment task that will run inside tokio
@@ -67,6 +80,7 @@ where
         let num_events = publisher.publish_events(&tx).await;
         if let Err(err) = num_events {
             error!("Error while publishing: {err}");
+            break;
         }
     }
 }
