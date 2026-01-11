@@ -56,6 +56,16 @@ Cargo build scripts automatically:
 
 ## License
 
-All code is distributed under the terms of the [GNU Affero General Public License].
+This project uses dual licensing due to Linux kernel compatibility requirements:
 
-[GNU Affero General Public License]: LICENSE
+### Userspace Code (Rust)
+All Rust code in `sikte/src/` (excluding `sikte/src/bpf/`) is licensed under:
+- **AGPL-3.0-or-later** - [GNU Affero General Public License v3.0 or later](https://www.gnu.org/licenses/agpl-3.0.html)
+
+### Kernel-space Code (eBPF)
+eBPF programs in `sikte/src/bpf/` must be GPL-compatible to load into the Linux kernel:
+- **GPL-2.0-or-later** - [GNU General Public License v2.0 or later](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+
+Each source file includes an SPDX license identifier header indicating which license applies. See [LICENSE](LICENSE) for the full AGPL-3.0 license text (userspace code).
+
+For more information, check [A Practical Guide to eBPF Licensing](https://ebpf.io/blog/ebpf-licensing-guide/)

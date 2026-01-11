@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 #[cfg(target_arch = "x86_64")]
 #[derive(Debug, Clone, Copy)]
 #[allow(non_camel_case_types)]

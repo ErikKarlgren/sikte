@@ -1,11 +1,11 @@
-// SPDX-License-Identifier: GPL-2.0 OR MIT
+// SPDX-License-Identifier: GPL-2.0-or-later
 #include "sikte.h"
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
 #include "vmlinux.h"
 
-char LICENSE[] SEC("license") = "GNU Affero General Public License";
+char LICENSE[] SEC("license") = "GPL";
 
 // Dummy instance to force skeleton to generate Rust type definitions
 struct syscall_data _syscall_data = {0};

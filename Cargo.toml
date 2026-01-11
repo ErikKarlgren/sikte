@@ -4,7 +4,7 @@ members = ["sikte"]
 default-members = ["sikte"]
 
 [workspace.package]
-license = "GNU Affero General Public License"
+license = "AGPL-3.0-or-later"
 edition = "2024"
 
 [workspace.dependencies]

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 use log::{debug, error};
 use tokio::{
     sync::broadcast::{Receiver, Sender, error::RecvError},

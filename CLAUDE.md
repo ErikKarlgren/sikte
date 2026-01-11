@@ -200,6 +200,23 @@ Currently only x86_64 is supported. To add another architecture:
 - Helper methods provide safe access: `state.syscall_id()`, `state.syscall_ret()`
 - The generated skeleton is located at `OUT_DIR/sikte.skel.rs`
 
+## Licensing
+
+This project uses **dual licensing** due to Linux kernel compatibility requirements:
+
+- **Userspace Rust code** (`sikte/src/`, excluding `sikte/src/bpf/`): **AGPL-3.0-or-later**
+  - The main binary and all Rust modules are licensed under AGPL-3.0-or-later
+  - Cargo.toml reflects this license for the Rust crate
+
+- **Kernel-space eBPF code** (`sikte/src/bpf/*.c`, `sikte/src/bpf/*.h`): **GPL-2.0-or-later**
+  - eBPF programs must be GPL-compatible to load into the Linux kernel
+  - AGPL-3.0 is NOT compatible with Linux's GPL-2.0-only license
+  - Each C file has an SPDX header indicating GPL-2.0-or-later
+  - The LICENSE string in the eBPF program is set to "GPL" for kernel verifier compatibility
+
+**When adding new eBPF code**: Always use `// SPDX-License-Identifier: GPL-2.0-or-later` at the top of C files in `sikte/src/bpf/`.
+**When adding new userspace code**: Always use `// SPDX-License-Identifier: AGPL-3.0-or-later` at the top of all other source code files
+
 ## Current Development Status
 
 **Focus**: Syscall tracing with CO-RE support

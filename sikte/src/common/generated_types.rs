@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /// Generated types from libbpf-rs skeleton
 ///
 /// This module provides a bridge between the auto-generated types from libbpf-rs
