@@ -8,7 +8,7 @@ use std::{
 };
 
 use anyhow::anyhow;
-use log::{error, warn};
+use log::warn;
 use tokio::sync::broadcast::Sender;
 
 use crate::{
@@ -54,23 +54,21 @@ impl SyscallPublisher {
         // Create ring buffer with callback
         let mut builder = libbpf_rs::RingBufferBuilder::new();
 
+        // Non-zero return values in the callback will stop ring buffer consumption early.
         builder.add(ring_buf.map(), move |data: &[u8]| -> i32 {
-            // Parse syscall data using plain crate (zero-copy deserialization)
             let mut syscall_data = SyscallData::default();
+            // copy into struct to ensure memory alignment
             match plain::copy_from_bytes(&mut syscall_data, data) {
                 Ok(()) => {
-                    // Send to event bus
                     if let Err(e) = tx.send(Event::Syscall(syscall_data)) {
-                        error!("Failed to send syscall event: {e}");
-                        return -1;
+                        warn!("Dropping syscall event (send failed): {e}");
                     }
-                    0
                 }
                 Err(e) => {
                     warn!("Failed to parse syscall data: {e:?}");
-                    -1
                 }
-            }
+            };
+            0
         })?;
 
         let ring_buffer = builder.build()?;
