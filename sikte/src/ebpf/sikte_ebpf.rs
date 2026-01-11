@@ -1,7 +1,10 @@
 use std::mem::MaybeUninit;
 
 use crate::common::constants::{attach_points::*, program_names::*};
-use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
+use libbpf_rs::{
+    Link,
+    skel::{OpenSkel, Skel, SkelBuilder},
+};
 use log::debug;
 
 use super::error::EbpfError;
@@ -31,18 +34,14 @@ impl SikteEbpf {
         let open_object = Box::leak(Box::new(MaybeUninit::uninit()));
         let open_skel = skel_builder
             .open(open_object)
-            .map_err(|e| EbpfError::LoadError {
-                program: "skeleton",
-                source: e,
-            })?;
+            .map_err(|e| EbpfError::as_load_error(e, "open skeleton"))?;
 
         debug!("Loading eBPF programs into kernel (CO-RE relocations will be applied)");
 
         // Load programs into kernel (performs CO-RE relocations)
-        let skel = open_skel.load().map_err(|e| EbpfError::LoadError {
-            program: "skeleton",
-            source: e,
-        })?;
+        let skel = open_skel
+            .load()
+            .map_err(|e| EbpfError::as_load_error(e, "load skeleton"))?;
 
         debug!("eBPF programs loaded successfully with CO-RE support");
 
@@ -56,17 +55,17 @@ impl SikteEbpf {
             SIKTE_RAW_TRACE_POINT_AT_ENTER, SYS_ENTER
         );
 
-        // Attach all programs in skeleton
-        // TODO: For more granular control, could use:
-        // self.skel.progs().sikte_raw_trace_point_at_enter().attach()?
-        self.skel.attach().map_err(|e| EbpfError::AttachError {
-            program: SIKTE_RAW_TRACE_POINT_AT_ENTER,
-            attach_target: SYS_ENTER,
-            source: e,
-        })?;
+        let link = self
+            .skel
+            .progs
+            .sikte_raw_trace_point_at_enter
+            .attach()
+            .map_err(|e| {
+                EbpfError::as_attach_error(e, SIKTE_RAW_TRACE_POINT_AT_ENTER, SYS_ENTER)
+            })?;
 
-        debug!("Successfully attached sys_enter program");
-        Ok(SysEnterProgram { _private: () })
+        debug!("Successfully attached {SYS_ENTER} program");
+        Ok(SysEnterProgram { _link: link })
     }
 
     /// Attach sys_exit raw tracepoint
@@ -76,12 +75,15 @@ impl SikteEbpf {
             SIKTE_RAW_TRACE_POINT_AT_EXIT, SYS_EXIT
         );
 
-        // Note: attach() is already called in attach_sys_enter_program
-        // Since skeleton.attach() attaches all programs, this is a no-op
-        // but we keep it for API compatibility
+        let link = self
+            .skel
+            .progs
+            .sikte_raw_trace_point_at_exit
+            .attach()
+            .map_err(|e| EbpfError::as_attach_error(e, SIKTE_RAW_TRACE_POINT_AT_EXIT, SYS_EXIT))?;
 
-        debug!("sys_exit program attached (via skeleton.attach())");
-        Ok(SysExitProgram { _private: () })
+        debug!("Successfully attached {SYS_EXIT} program");
+        Ok(SysExitProgram { _link: link })
     }
 
     /// Get reference to SYSCALL_EVENTS ring buffer map
@@ -95,14 +97,16 @@ impl SikteEbpf {
     }
 }
 
-/// Represents that the 'sys_enter' program has been loaded into the kernel
+/// Represents that the 'sys_enter' program has been loaded into the kernel. When dropped, deattach
+/// it
 pub struct SysEnterProgram {
-    /// Private field. This avoids letting the user create an instance of this type
-    _private: (),
+    /// Private field that contains the link to `sys_enter`
+    _link: Link,
 }
 
-/// Represents that the 'sys_exit' program has been loaded into the kernel
+/// Represents that the 'sys_exit' program has been loaded into the kernel. When dropped, deattach
+/// it
 pub struct SysExitProgram {
-    /// Private field. This avoids letting the user create an instance of this type
-    _private: (),
+    /// Private field that contains the link to `sys_enter`
+    _link: Link,
 }
