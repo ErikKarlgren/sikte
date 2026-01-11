@@ -61,9 +61,11 @@ impl EventSubscriber for ShellSubscriber {
             syscall_state_tag::AT_EXIT => {
                 trace!("sys_exit: pid {pid}, tid {tid}");
                 match self.thr_to_last_sys_enter.remove(&tid) {
-                    Some(last_data) => {
-                        if last_data.state.tag == syscall_state_tag::AT_ENTER {
-                            let syscall_id = last_data.state.syscall_id().unwrap();
+                    None => {
+                        println!("({pid}/{tid}) ??? (took ??? us)");
+                    }
+                    Some(last_data) => match last_data.state.syscall_id() {
+                        Some(syscall_id) => {
                             let syscall_name = SyscallID::try_from(syscall_id)
                                 .map(|id| id.as_str())
                                 .unwrap_or("???");
@@ -71,15 +73,13 @@ impl EventSubscriber for ShellSubscriber {
                             let time_us = time_ns as f64 / 1000f64;
                             println!("({pid}/{tid}) {syscall_name} (took {time_us:.2} us)");
                             self.total_syscalls_time += time_us;
-                        } else {
+                        }
+                        None => {
                             unreachable!(
                                 "only syscall_state_tag::AT_ENTER can be stored in self.thr_to_last_sys_enter"
                             );
                         }
-                    }
-                    None => {
-                        println!("({pid}/{tid}) ??? (took ??? us)");
-                    }
+                    },
                 }
             }
             _ => {
