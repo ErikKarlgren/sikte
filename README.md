@@ -11,6 +11,7 @@ An eBPF-based syscall tracer with CO-RE (Compile Once, Run Everywhere) support.
 2. **eBPF development tools**:
    - clang/LLVM for compiling C eBPF programs
    - libbpf development headers: `apt-get install libbpf-dev`
+   - just (command runner): `cargo install just` or via package manager
 
 3. **Kernel requirements**:
    - Linux kernel 5.8+ with BTF enabled
