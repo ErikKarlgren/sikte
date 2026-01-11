@@ -10,7 +10,6 @@ An eBPF-based syscall tracer with CO-RE (Compile Once, Run Everywhere) support.
 
 2. **eBPF development tools**:
    - clang/LLVM for compiling C eBPF programs
-   - bpftool for generating vmlinux.h: `apt-get install linux-tools-generic` (or equivalent)
    - libbpf development headers: `apt-get install libbpf-dev`
 
 3. **Kernel requirements**:
@@ -45,7 +44,7 @@ This project uses libbpf-rs and CO-RE, which means:
 - Automatic field offset relocations based on kernel BTF
 - No need to recompile for different kernel configurations
 
-The vmlinux.h header is generated from your system's BTF at build time, capturing all kernel type definitions for CO-RE relocations.
+The vmlinux.h header is sourced from [libbpf's github repo](https://github.com/libbpf/vmlinux.h.git)
 
 ## Development
 
