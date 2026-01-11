@@ -35,7 +35,7 @@ impl ShellSubscriber {
 
 impl ShellSubscriber {
     fn show_summary(&self) {
-        println!("Spent time on syscalls: {} us", self.total_syscalls_time);
+        println!("Spent time on syscalls: {:.2} us", self.total_syscalls_time);
     }
 }
 
@@ -69,7 +69,7 @@ impl EventSubscriber for ShellSubscriber {
                                 .unwrap_or("???");
                             let time_ns = timestamp - last_data.timestamp;
                             let time_us = time_ns as f64 / 1000f64;
-                            println!("({pid}/{tid}) {syscall_name} (took {time_us} us)");
+                            println!("({pid}/{tid}) {syscall_name} (took {time_us:.2} us)");
                             self.total_syscalls_time += time_us;
                         } else {
                             unreachable!(
