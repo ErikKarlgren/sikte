@@ -6,22 +6,22 @@ format:
     clang-format -i sikte/src/bpf/sikte.bpf.c sikte/src/bpf/sikte.h
     cargo fmt
 
+check: format
+    cargo clippy --all-targets --all-features -- -D warnings
+
 build: format
-    cargo build
+    cargo build --all-targets --all-features
 
 build-release: format
-    cargo build --release
+    cargo build --all-targets --all-features --release
 
-check: format
-    cargo check && cargo clippy
+test: build
+    RUST_BACKTRACE=1 sudo -E cargo test --all-features
 
 run *args: (run-log "info" args)
 
 run-log log_level *args: build
     RUST_BACKTRACE=1 RUST_LOG={{log_level}} cargo run --config 'target."cfg(all())".runner="sudo -E"' -- {{args}}
-
-test:
-    RUST_BACKTRACE=1 sudo -E cargo test
 
 dbg-test *args:
     CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=rust-gdb cargo test {{args}}
