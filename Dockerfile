@@ -8,11 +8,12 @@ RUN apt-get update && \
 
 RUN rustup toolchain install stable && \
     rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt && \
-    rustup override set 1.92.0 && \
     rustup component add rustfmt
 
 # Set working directory
 WORKDIR /app
+
+RUN rustup override set 1.92.0
 
 # Copy manifests first for better layer caching
 COPY Cargo.toml Cargo.lock ./
