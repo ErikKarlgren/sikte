@@ -449,7 +449,7 @@ impl TryFrom<i64> for SyscallID {
     type Error = ();
 
     fn try_from(value: i64) -> Result<Self, Self::Error> {
-        if value < 0 || value as usize > ID_TO_SYSCALL_TABLE.len() {
+        if value < 0 || value as usize >= ID_TO_SYSCALL_TABLE.len() {
             return Err(());
         }
         ID_TO_SYSCALL_TABLE[value as usize].ok_or(())
