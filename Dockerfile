@@ -1,27 +1,14 @@
 # Install Rust toolchain and eBPF dependencies
-FROM rust:1.88-slim AS builder
+FROM rust:1.92-slim AS builder
 
 # Install system dependencies needed for eBPF compilation
-RUN apt-get update && apt-get install -y \
-    clang \
-    llvm \
-    lld \
-    libelf-dev \
-    zlib1g-dev \
-    linux-libc-dev \
-    pkg-config \
-    make \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt-get install -y build-essential zlib1g-dev clang llvm libelf1 libelf-dev libbpf-dev clang-format just && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install bpf-linker for Aya eBPF programs
-RUN cargo install bpf-linker
-
-# Install nightly toolchain and rust-src for eBPF compilation
-RUN rustup toolchain install nightly \
-    && rustup component add rust-src --toolchain nightly \
-    && rustup default nightly \
-    && rustup override set 1.88.0
+RUN rustup toolchain install stable && \
+    rustup override set 1.92.0 && \
+    rustup component add rustfmt
 
 # Set working directory
 WORKDIR /app
@@ -29,8 +16,6 @@ WORKDIR /app
 # Copy manifests first for better layer caching
 COPY Cargo.toml Cargo.lock ./
 COPY sikte/Cargo.toml ./sikte/
-COPY sikte-common/Cargo.toml ./sikte-common/
-COPY sikte-ebpf/Cargo.toml ./sikte-ebpf/
 
 # Fetch dependencies
 RUN cargo fetch
@@ -39,6 +24,6 @@ RUN cargo fetch
 COPY . .
 
 # Build the application in release mode with a locked Cargo.lock
-RUN cargo build --release --locked
+RUN just build-release
 
 # And now, the user needs to extract the binary out

@@ -1,5 +1,4 @@
 LICENSE
-justfile
 rustfmt.toml
 
 *.md

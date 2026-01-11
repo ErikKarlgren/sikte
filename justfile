@@ -13,7 +13,7 @@ build: format
     cargo build --all-targets --all-features
 
 build-release: format
-    cargo build --all-targets --all-features --release
+    cargo build --all-targets --all-features --release --locked
 
 test: build
     RUST_BACKTRACE=1 sudo -E cargo test --all-features

@@ -13,4 +13,4 @@ docker run --rm \
 	"$docker_tag" \
 	cp "/app/target/release/sikte" "${docker_output_dir}/${target_dir}"
 
-echo "Finished! You can find the binary in /output/${target_dir}"
+echo "Finished! You can find the binary in ${target_dir}"
