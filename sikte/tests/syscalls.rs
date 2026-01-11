@@ -102,15 +102,28 @@ async fn trace_child_process_read_syscall() {
 
             // 4. Assert that at least one read syscall was made
             let syscalls = subscriber.syscalls.lock().unwrap();
-            let read_syscall_found = syscalls.iter().any(|s| {
-                s.state
+            assert!(
+                !syscalls.is_empty(),
+                "No syscalls found for the traced process"
+            );
+
+            // for debugging purposes
+            for sc in syscalls.iter() {
+                if let Some(id) = sc.state.syscall_id() {
+                    let id = SyscallID::try_from(id).unwrap();
+                    println!(">>> Syscall {} (id={})", id.as_str(), id as i64);
+                }
+            }
+
+            let read_syscall_found = syscalls.iter().any(|sc| {
+                sc.state
                     .syscall_id()
                     .is_some_and(|id| id == SyscallID::read as i64)
             });
 
             assert!(
                 read_syscall_found,
-                "No read (0) syscall was found for the traced process"
+                "No read syscall was found for the traced process"
             );
         }
         Ok(ForkResult::Child) => {
