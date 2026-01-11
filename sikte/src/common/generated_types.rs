@@ -71,14 +71,14 @@ mod tests {
 
     #[test]
     fn test_syscall_state_tagged_union() {
-        use sikte_skel::types::{__anon_3, __anon_4, syscall_state_data};
+        use sikte_skel::types::{at_enter_t, at_exit_t, syscall_state_data};
 
         // Test AT_ENTER state
         let state = SyscallState {
             tag: syscall_state_tag::AT_ENTER,
             _padding: 0,
             data: syscall_state_data {
-                at_enter: __anon_3 { syscall_id: 42 },
+                at_enter: at_enter_t { syscall_id: 42 },
             },
         };
         assert_eq!(state.tag, syscall_state_tag::AT_ENTER);
@@ -90,7 +90,7 @@ mod tests {
             tag: syscall_state_tag::AT_EXIT,
             _padding: 0,
             data: syscall_state_data {
-                at_exit: __anon_4 { syscall_ret: -1 },
+                at_exit: at_exit_t { syscall_ret: -1 },
             },
         };
         assert_eq!(state.tag, syscall_state_tag::AT_EXIT);
