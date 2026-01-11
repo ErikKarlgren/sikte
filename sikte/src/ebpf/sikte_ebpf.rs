@@ -1,6 +1,5 @@
 use std::mem::MaybeUninit;
 
-use crate::common::constants::{attach_points::*, program_names::*};
 use libbpf_rs::{
     Link,
     skel::{OpenSkel, SkelBuilder},
@@ -8,6 +7,7 @@ use libbpf_rs::{
 use log::debug;
 
 use super::error::EbpfError;
+use crate::common::constants::{attach_points::*, program_names::*};
 
 // Include generated skeleton (following libbpf-rs examples pattern)
 mod sikte_skel {
@@ -81,12 +81,12 @@ impl SikteEbpf {
     }
 
     /// Get reference to SYSCALL_EVENTS ring buffer map
-    pub fn syscall_events_map(&self) -> &libbpf_rs::Map {
+    pub fn syscall_events_map(&self) -> &libbpf_rs::Map<'_> {
         &self.skel.maps.SYSCALL_EVENTS
     }
 
     /// Get reference to PID_ALLOW_LIST hash map
-    pub fn pid_allow_list_map(&self) -> &libbpf_rs::Map {
+    pub fn pid_allow_list_map(&self) -> &libbpf_rs::Map<'_> {
         &self.skel.maps.PID_ALLOW_LIST
     }
 }

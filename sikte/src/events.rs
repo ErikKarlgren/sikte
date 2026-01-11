@@ -1,11 +1,12 @@
-use crate::common::generated_types::SyscallData;
 use log::{debug, error};
 use tokio::{
     sync::broadcast::{Receiver, Sender, error::RecvError},
     task::JoinHandle,
 };
 
-use crate::{publishers::EventPublisher, subscribers::EventSubscriber};
+use crate::{
+    common::generated_types::SyscallData, publishers::EventPublisher, subscribers::EventSubscriber,
+};
 
 /// Enum for representing all the possible eBPF events in this program
 #[derive(Clone)]

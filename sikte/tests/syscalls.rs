@@ -1,3 +1,13 @@
+use std::{
+    fs::File,
+    io::Read,
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
+
 use nix::{
     sys::wait::{WaitStatus, waitpid},
     unistd::{ForkResult, fork},
@@ -12,15 +22,6 @@ use sikte::{
     memlock_rlimit::bump_memlock_rlimit,
     publishers::syscalls::{self, SyscallID, SyscallPublisher},
     subscribers::EventSubscriber,
-};
-use std::{
-    fs::File,
-    io::Read,
-    sync::{
-        Arc, Mutex,
-        atomic::{AtomicBool, Ordering},
-    },
-    time::Duration,
 };
 
 #[derive(Clone)]

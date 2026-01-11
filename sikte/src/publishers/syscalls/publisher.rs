@@ -1,15 +1,17 @@
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
 };
-use std::time::Duration;
 
-use crate::common::generated_types::SyscallData;
 use anyhow::anyhow;
 use log::{error, warn};
 use tokio::sync::broadcast::Sender;
 
 use crate::{
+    common::generated_types::SyscallData,
     ebpf::{SysEnterProgram, SysExitProgram, map_types::SyscallRingBuf},
     events::Event,
     publishers::EventPublisher,

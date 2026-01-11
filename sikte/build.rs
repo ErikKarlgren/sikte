@@ -1,5 +1,6 @@
-use libbpf_cargo::SkeletonBuilder;
 use std::{env, ffi::OsStr, path::PathBuf};
+
+use libbpf_cargo::SkeletonBuilder;
 
 const SRC: &str = "src/bpf/sikte.bpf.c";
 const HEADER: &str = "src/bpf/sikte.h";

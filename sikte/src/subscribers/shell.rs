@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
+use libc::pid_t;
+use log::trace;
+
 use super::EventSubscriber;
 use crate::{
     common::generated_types::{SyscallData, SyscallStateExt, syscall_state_tag},
     publishers::syscalls::SyscallID,
 };
-use libc::pid_t;
-use log::trace;
 
 /// Event Subscriber that writes to stdout
 pub struct ShellSubscriber {

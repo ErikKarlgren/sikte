@@ -1,3 +1,8 @@
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+
 use anyhow::anyhow;
 use itertools::Itertools;
 use libc::pid_t;
@@ -12,10 +17,6 @@ use sikte::{
     memlock_rlimit::bump_memlock_rlimit,
     publishers::syscalls::{self, SyscallPublisher},
     subscribers::ShellSubscriber,
-};
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
 };
 use tokio::{process::Command, signal};
 
