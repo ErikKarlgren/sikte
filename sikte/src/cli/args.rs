@@ -14,7 +14,7 @@ impl Cli {
     /// Parse args and do some checks
     pub fn parse_args() -> Self {
         let args = Cli::parse();
-        debug!("parsing args succeded");
+        debug!("parsing args succeeded");
         args
     }
 }
