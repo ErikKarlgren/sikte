@@ -12,7 +12,8 @@ libbpf-rs = { version = "0.25", default-features = false }
 libbpf-cargo = { version = "0.25", default-features = false }
 
 anyhow = { version = "1", default-features = false }
-bytemuck = { version = "1.23.2", default-features = false }
+plain = { version = "0.2", default-features = false }
+
 # `std` feature is currently required to build `clap`.
 #
 # See https://github.com/clap-rs/clap/blob/61f5ee5/clap_builder/src/lib.rs#L15.

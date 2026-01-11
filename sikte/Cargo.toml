@@ -8,13 +8,12 @@ license.workspace = true
 [dependencies]
 anyhow = { workspace = true, default-features = true }
 libbpf-rs = { workspace = true }
-bytemuck = { workspace = true, features = ["derive"] }
 clap = { workspace = true }
 env_logger = { workspace = true }
 itertools = { workspace = true }
 libc = { workspace = true }
 log = { workspace = true }
-plain = "0.2"
+plain = { workspace = true }
 tokio = { workspace = true, features = [
     "macros",
     "net",

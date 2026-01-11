@@ -194,7 +194,7 @@ Currently only x86_64 is supported. To add another architecture:
 ## Important Implementation Notes
 
 - All shared types must be C-compatible with `#[repr(C)]` and explicit alignment
-- Use `bytemuck::CheckedBitPattern` for safe zero-copy deserialization
+- Use `plain` for safe deserialization
 - Ring buffer can drop events if userspace consumer is slow (logged as warnings)
 - Pattern matching uses `state.tag == SyscallStateTag::AT_ENTER` (not Rust enum variants)
 - Helper methods provide safe access: `state.syscall_id()`, `state.syscall_ret()`
