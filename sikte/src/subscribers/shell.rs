@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 use std::{collections::HashMap, time::Instant};
 
+use colored::Colorize;
 use libc::pid_t;
 use log::{trace, warn};
 
@@ -80,12 +81,18 @@ impl EventSubscriber for ShellSubscriber {
                                 .unwrap_or("???");
                             let time_ns = timestamp.saturating_sub(last_data.timestamp);
                             let time_us = time_ns as f64 / 1000f64;
-                            println!("({pid}/{tid}) {syscall_name} (took {time_us:.2} us)");
+
+                            let to_print =
+                                format!("({pid}/{tid}) {syscall_name} (took {time_us:.2} us)");
+                            println!("{}", to_print.dimmed());
                             self.total_syscalls_time += time_us;
                         }
                         None => warn!("Unexpected non-AT_ENTER stored for tid {tid}"),
                     },
-                    None => println!("({pid}/{tid}) ??? (took ??? us)"),
+                    None => {
+                        let to_print = format!("({pid}/{tid}) ??? (took ??? us)");
+                        println!("{}", to_print.dimmed());
+                    }
                 }
             }
             _ => trace!(
