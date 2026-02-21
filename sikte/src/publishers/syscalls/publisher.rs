@@ -7,7 +7,6 @@ use std::{
     time::Duration,
 };
 
-use anyhow::anyhow;
 use log::warn;
 use tokio::sync::broadcast::Sender;
 
@@ -15,7 +14,7 @@ use crate::{
     common::generated_types::SyscallData,
     ebpf::{SysEnterProgram, SysExitProgram, map_types::SyscallRingBuf},
     events::Event,
-    publishers::EventPublisher,
+    publishers::{EventPublisher, event_publisher::PublishEventError},
 };
 
 /// Requirements for SyscallPublisher
@@ -86,10 +85,10 @@ impl EventPublisher for SyscallPublisher {
         "Syscall"
     }
 
-    async fn publish_events(&mut self, _tx: &Sender<Event>) -> anyhow::Result<u32> {
+    async fn publish_events(&mut self, _tx: &Sender<Event>) -> Result<u32, PublishEventError> {
         // Check for interruption
         if self.interrupted.load(Ordering::Acquire) {
-            return Err(anyhow!("Interrupted by user"));
+            return Err(PublishEventError::Interrupted);
         }
 
         // Poll ring buffer in a blocking task
@@ -98,8 +97,8 @@ impl EventPublisher for SyscallPublisher {
         let result = tokio::task::block_in_place(|| rb.poll(Duration::from_millis(100)));
 
         match result {
-            Ok(_) => Ok(0), // Event count tracked in callback
-            Err(e) => Err(anyhow!("Ring buffer poll error: {}", e)),
+            Ok(()) => Ok(0), // Event count tracked in callback
+            Err(e) => Err(PublishEventError::Libbpf(e)),
         }
     }
 }
