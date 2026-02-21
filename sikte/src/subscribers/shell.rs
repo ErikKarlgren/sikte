@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Instant};
 
 use libc::pid_t;
 use log::{trace, warn};
@@ -16,6 +16,8 @@ pub struct ShellSubscriber {
     thr_to_last_sys_enter: HashMap<pid_t, SyscallData>,
     /// Total time spent on syscalls in us
     total_syscalls_time: f64,
+    /// When did we start tracking ebpf events
+    begin: Instant,
 }
 
 impl Default for ShellSubscriber {
@@ -29,13 +31,22 @@ impl ShellSubscriber {
         ShellSubscriber {
             thr_to_last_sys_enter: HashMap::new(),
             total_syscalls_time: 0f64,
+            begin: Instant::now(),
         }
     }
 }
 
 impl ShellSubscriber {
     fn show_summary(&self) {
+        let elapsed_time = self.begin.elapsed().as_micros();
+        let percentage_syscalls = self.total_syscalls_time / (elapsed_time as f64) * 100f64;
+
         println!("Spent time on syscalls: {:.2} us", self.total_syscalls_time);
+        println!("Total analysis time: {elapsed_time} us");
+        println!(
+            "{:.2}% of the time was spent on syscalls",
+            percentage_syscalls
+        );
     }
 }
 
