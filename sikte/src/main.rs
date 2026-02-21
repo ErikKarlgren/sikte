@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
     event_bus.spawn_subscription(ShellSubscriber::new());
 
     let child_process = match args.command {
-        Commands::Record(RecordArgs { target }) => {
+        Commands::Trace(RecordArgs { target }) => {
             let sys_enter = ebpf.attach_sys_enter_program()?;
             let sys_exit = ebpf.attach_sys_exit_program()?;
             let requirements = syscalls::Requirements::new(sys_enter, sys_exit);
