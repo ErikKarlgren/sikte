@@ -17,6 +17,8 @@ pub struct ShellSubscriber {
     thr_to_last_sys_enter: HashMap<pid_t, SyscallData>,
     /// Total time spent on syscalls in us
     total_syscalls_time: f64,
+    /// Total count of syscalls made
+    total_syscalls_count: usize,
     /// When did we start tracking ebpf events
     begin: Instant,
 }
@@ -32,6 +34,7 @@ impl ShellSubscriber {
         ShellSubscriber {
             thr_to_last_sys_enter: HashMap::new(),
             total_syscalls_time: 0f64,
+            total_syscalls_count: 0,
             begin: Instant::now(),
         }
     }
@@ -42,6 +45,7 @@ impl ShellSubscriber {
         let elapsed_time = self.begin.elapsed().as_micros();
         let percentage_syscalls = self.total_syscalls_time / (elapsed_time as f64) * 100f64;
 
+        println!("Total syscalls made: {}", self.total_syscalls_count);
         println!("Spent time on syscalls: {:.2} us", self.total_syscalls_time);
         println!("Total analysis time: {elapsed_time} us");
         println!(
@@ -72,6 +76,7 @@ impl EventSubscriber for ShellSubscriber {
             }
             syscall_state_tag::AT_EXIT => {
                 trace!("sys_exit: pid {pid}, tid {tid}");
+                self.total_syscalls_count += 1;
 
                 match self.thr_to_last_sys_enter.remove(&tid) {
                     Some(last_data) => match last_data.state.syscall_id() {
