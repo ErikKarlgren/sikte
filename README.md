@@ -1,8 +1,12 @@
 # sikte
 
-An eBPF-based syscall tracer with CO-RE (Compile Once, Run Everywhere) support.
+## About the project
 
-## Prerequisites
+sikte is a performance tracer for Linux programs that uses eBPF and CO-RE (Compile Once, Run Everywhere) support. It traces several events (syscalls, hardware counters, ...) and correlates them to give the user rich but easy to digest information about a program's performance.
+
+## Getting Started
+
+### Prerequisites
 
 1. **Rust toolchains**:
    - Stable: `rustup toolchain install stable`
@@ -18,7 +22,7 @@ An eBPF-based syscall tracer with CO-RE (Compile Once, Run Everywhere) support.
    - Verify BTF is available: `ls /sys/kernel/btf/vmlinux`
    - CONFIG_DEBUG_INFO_BTF=y in kernel config
 
-## Build & Run
+### Build & Run
 
 Build the project:
 
@@ -26,17 +30,27 @@ Build the project:
 just build-release
 ```
 
-Run with root privileges (required for eBPF):
+Run with root privileges (required for eBPF, although one could create a user with the minimum privileges required):
 
 ```shell
-sudo ./target/release/sikte record --command ls
+sudo ./target/release/sikte trace ls
 ```
 
-Or use cargo directly:
+Or using cargo:
 
 ```shell
-cargo run --release --config 'target."cfg(all())".runner="sudo -E"' -- record --command ls
+cargo run --release --config 'target."cfg(all())".runner="sudo -E"' -- trace ls
 ```
+
+## Roadmap
+
+- [x] Trace syscalls
+   - [ ] Trace syscalls for child processes
+- [ ] Trace hardware counters overtime (cache misses, ...)
+- [ ] Calculate correlations between them
+- [ ] Store tracing data for each run as files with a versioned schema
+- [ ] Create a GUI on top of stored traces that can be run in any OS that has Rust support (Windows, Linux, ...)
+- [ ] Trace stacktraces overtime and create flamegraphs
 
 ## CO-RE Support
 
