@@ -14,7 +14,7 @@ use crate::{
     common::generated_types::SyscallData,
     ebpf::{SysEnterProgram, SysExitProgram, map_types::SyscallRingBuf},
     events::Event,
-    publishers::{EventPublisher, event_publisher::PublishEventError},
+    publishers::{EventPublisher, PublishEventError},
 };
 
 /// Requirements for SyscallPublisher
