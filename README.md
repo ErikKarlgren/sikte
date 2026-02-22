@@ -22,6 +22,9 @@ sikte is a performance tracer for Linux programs that uses eBPF and CO-RE (Compi
    - Verify BTF is available: `ls /sys/kernel/btf/vmlinux`
    - CONFIG_DEBUG_INFO_BTF=y in kernel config
 
+#### Optional
+- Install [`cargo-flamegraph`](https://github.com/flamegraph-rs/flamegraph) to run `just flamegraph`, which creates a flamegraph image file for analysing sikte's overhead
+
 ### Build & Run
 
 Build the project:
