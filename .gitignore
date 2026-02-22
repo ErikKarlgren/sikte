@@ -10,3 +10,8 @@ target/
 
 # Generated skeleton files
 sikte/src/bpf/*.skel.rs
+
+# Generated flamegraph files
+flamegraph.svg
+perf.data
+perf.data.old

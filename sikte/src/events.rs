@@ -6,7 +6,9 @@ use tokio::{
 };
 
 use crate::{
-    common::generated_types::SyscallData, publishers::EventPublisher, subscribers::EventSubscriber,
+    common::generated_types::SyscallData,
+    publishers::{EventPublisher, PublishEventError},
+    subscribers::EventSubscriber,
 };
 
 /// Enum for representing all the possible eBPF events in this program
@@ -78,8 +80,12 @@ where
 {
     loop {
         let num_events = publisher.publish_events(&tx).await;
+
         if let Err(err) = num_events {
-            error!("Error while publishing: {err}");
+            match err {
+                PublishEventError::Interrupted => debug!("Process interrupted"),
+                PublishEventError::Libbpf(error) => error!("Internal error occurred: {error}"),
+            }
             break;
         }
     }

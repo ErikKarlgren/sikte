@@ -1,9 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-use std::future::Future;
-
+use thiserror::Error;
 use tokio::sync::broadcast::Sender;
 
 use crate::events::Event;
+
+/// Error which prevented a publisher from publishing an ebpf event
+#[derive(Error, Debug)]
+pub enum PublishEventError {
+    /// sikte was interrupted
+    #[error("interrupted")]
+    Interrupted,
+    /// Error related to libbpf
+    #[error("libbpf error: {0}")]
+    Libbpf(#[source] libbpf_rs::Error),
+}
 
 /// Extracts eBPF events from the kernel and publishes them
 pub trait EventPublisher {
@@ -16,5 +26,5 @@ pub trait EventPublisher {
     fn publish_events(
         &mut self,
         tx: &Sender<Event>,
-    ) -> impl Future<Output = anyhow::Result<u32>> + Send;
+    ) -> impl Future<Output = Result<u32, PublishEventError>> + Send;
 }

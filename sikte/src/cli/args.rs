@@ -21,12 +21,12 @@ impl Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Record traces from processes
-    Record(RecordArgs),
+    /// Trace other processes
+    Trace(TraceArgs),
 }
 
 #[derive(Debug, Args)]
-pub struct RecordArgs {
+pub struct TraceArgs {
     #[command(flatten)]
     pub target: TargetArgs,
 }
@@ -39,7 +39,7 @@ pub struct TargetArgs {
     pub pid: Option<Vec<i32>>,
 
     /// Command to execute and trace
-    #[arg(long, num_args = 1.., group = "target")]
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true, group = "target")]
     pub command: Option<Vec<String>>,
 }
 

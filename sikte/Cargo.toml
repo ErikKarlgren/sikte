@@ -24,6 +24,7 @@ tokio = { workspace = true, features = [
     "sync",
 ] }
 thiserror = { workspace = true }
+colored = { workspace = true }
 
 [build-dependencies]
 libbpf-cargo = { workspace = true }
