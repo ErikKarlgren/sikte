@@ -2,7 +2,7 @@
 
 ## About the project
 
-sikte is a performance tracer for Linux programs that uses eBPF and CO-RE (Compile Once, Run Everywhere) support. It traces several events (syscalls, hardware counters, ...) and correlates them to give the user rich but easy to digest information about a program's performance.
+sikte is a performance tracer for Linux programs that uses eBPF and CO-RE (Compile Once, Run Everywhere) support. It traces several events (syscalls, hardware counters, ...) and correlates them to give the user rich but easy-to-digest information about a program's performance.
 
 ## Getting Started
 
