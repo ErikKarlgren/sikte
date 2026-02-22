@@ -24,6 +24,9 @@ run-log log_level *args: build
 dbg-test *args:
     CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER=rust-gdb cargo test {{args}}
 
+flamegraph *args: build
+    cargo flamegraph --root -- {{args}}
+
 install-local: build-release
     sudo cp target/release/sikte /usr/local/bin/
     @echo "Installed to /usr/local/bin/sikte"
