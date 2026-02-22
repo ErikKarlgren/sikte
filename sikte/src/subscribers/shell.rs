@@ -43,7 +43,11 @@ impl ShellSubscriber {
 impl ShellSubscriber {
     fn show_summary(&self) {
         let elapsed_time = self.begin.elapsed().as_micros();
-        let percentage_syscalls = self.total_syscalls_time / (elapsed_time as f64) * 100f64;
+        let percentage_syscalls = if elapsed_time > 0 {
+            self.total_syscalls_time / (elapsed_time as f64) * 100f64
+        } else {
+            0f64
+        };
 
         println!("Total syscalls made: {}", self.total_syscalls_count);
         println!("Spent time on syscalls: {:.2} us", self.total_syscalls_time);
