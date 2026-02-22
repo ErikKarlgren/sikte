@@ -9,7 +9,7 @@ use itertools::Itertools;
 use libc::pid_t;
 use log::info;
 use sikte::{
-    cli::args::{Cli, Commands, RecordArgs, Target, TargetArgs},
+    cli::args::{Cli, Commands, Target, TargetArgs, TraceArgs},
     ebpf::{
         SikteEbpf,
         map_types::{PidAllowList, SyscallRingBuf},
@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
     event_bus.spawn_subscription(ShellSubscriber::new());
 
     let child_process = match args.command {
-        Commands::Trace(RecordArgs { target }) => {
+        Commands::Trace(TraceArgs { target }) => {
             let sys_enter = ebpf.attach_sys_enter_program()?;
             let sys_exit = ebpf.attach_sys_exit_program()?;
             let requirements = syscalls::Requirements::new(sys_enter, sys_exit);

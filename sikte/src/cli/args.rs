@@ -21,12 +21,12 @@ impl Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Record traces from processes
-    Trace(RecordArgs),
+    /// Trace other processes
+    Trace(TraceArgs),
 }
 
 #[derive(Debug, Args)]
-pub struct RecordArgs {
+pub struct TraceArgs {
     #[command(flatten)]
     pub target: TargetArgs,
 }
