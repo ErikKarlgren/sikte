@@ -1,6 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-use std::fmt::Display;
-
 use thiserror::Error;
 use tokio::sync::broadcast::Sender;
 
@@ -10,18 +8,11 @@ use crate::events::Event;
 #[derive(Error, Debug)]
 pub enum PublishEventError {
     /// sikte was interrupted
+    #[error("interrupted")]
     Interrupted,
     /// Error related to libbpf
-    Libbpf(libbpf_rs::Error),
-}
-
-impl Display for PublishEventError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PublishEventError::Interrupted => write!(f, "interrupted"),
-            PublishEventError::Libbpf(error) => write!(f, "libbpf error: {error}"),
-        }
-    }
+    #[error("libbpf error: {0}")]
+    Libbpf(#[source] libbpf_rs::Error),
 }
 
 /// Extracts eBPF events from the kernel and publishes them
