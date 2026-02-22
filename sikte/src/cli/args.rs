@@ -39,7 +39,7 @@ pub struct TargetArgs {
     pub pid: Option<Vec<i32>>,
 
     /// Command to execute and trace
-    #[arg(trailing_var_arg(true), allow_hyphen_values(true), group = "target")]
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true, group = "target")]
     pub command: Option<Vec<String>>,
 }
 
