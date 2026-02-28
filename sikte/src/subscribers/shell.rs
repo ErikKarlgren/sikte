@@ -2,6 +2,7 @@
 use std::{collections::HashMap, time::Instant};
 
 use colored::Colorize;
+use itertools::Itertools;
 use libc::pid_t;
 use log::{trace, warn};
 
@@ -67,6 +68,56 @@ impl ShellSubscriber {
             0f64
         };
 
+        const N: usize = 5;
+        let syscall_count_stats = self.syscall_count_stats_as_str(N);
+
+        self.print_summary(
+            elapsed_time,
+            total_syscalls_time,
+            total_syscalls_count,
+            syscalls_time_percentage,
+            N,
+            &syscall_count_stats,
+        );
+    }
+
+    fn syscall_count_stats_as_str(&self, max_syscalls: usize) -> String {
+        let mut most_called: [(i64, u32); MAX_NUM_SYSCALLS] = self
+            .syscall_stats
+            .iter()
+            .enumerate()
+            .map(|(id, stat)| (id as i64, stat.number_of_calls))
+            .collect_array()
+            .unwrap();
+        most_called.sort_by_key(|(_, num_calls)| *num_calls);
+
+        let most_called: String = most_called
+            .into_iter()
+            .rev()
+            .take_while(|(_, num_calls)| *num_calls > 0)
+            .take(max_syscalls)
+            .map(|(id, num_calls)| {
+                format!(
+                    "- {} was called {} times\n",
+                    SyscallID::try_from(id)
+                        .map_or("???", |id| id.as_str())
+                        .blue(),
+                    num_calls.to_string().blue()
+                )
+            })
+            .collect::<String>();
+        most_called
+    }
+
+    fn print_summary(
+        &self,
+        elapsed_time: u128,
+        total_syscalls_time: f64,
+        total_syscalls_count: u32,
+        syscalls_time_percentage: f64,
+        max_syscalls: usize,
+        syscall_count_stats: &str,
+    ) {
         println!(
             r#"
 {}
@@ -80,6 +131,16 @@ impl ShellSubscriber {
             format!("{:.2} us", total_syscalls_time).blue(),
             format!("{:.2} us", elapsed_time).blue(),
             format!("{:.2}%", syscalls_time_percentage).blue(),
+        );
+        println!(
+            r#"
+{}
+{}
+            "#,
+            format!("Top {max_syscalls} most times used syscalls")
+                .bright_yellow()
+                .bold(),
+            syscall_count_stats
         );
     }
 }
