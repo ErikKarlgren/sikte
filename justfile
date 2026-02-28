@@ -14,7 +14,7 @@ build-release: check
     cargo build --all-targets --all-features --release --locked
 
 test: build
-    RUST_BACKTRACE=1 sudo -E cargo test --all-features
+    RUST_BACKTRACE=1 cargo test --config 'target."cfg(all())".runner="sudo -E"' --all-features
 
 run *args: (run-log "info" args)
 
