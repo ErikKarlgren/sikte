@@ -8,17 +8,16 @@ use log::{trace, warn};
 use super::EventSubscriber;
 use crate::{
     common::generated_types::{SyscallData, SyscallStateExt, syscall_state_tag},
-    publishers::syscalls::SyscallID,
+    publishers::syscalls::{MAX_NUM_SYSCALLS, SyscallID},
 };
 
 /// Event Subscriber that writes to stdout
+#[derive(Debug)]
 pub struct ShellSubscriber {
     /// Match a thread to its last registered sys_enter event
     thr_to_last_sys_enter: HashMap<pid_t, SyscallData>,
-    /// Total time spent on syscalls in us
-    total_syscalls_time: f64,
-    /// Total count of syscalls made
-    total_syscalls_count: usize,
+    /// Statistics related to syscalls
+    syscall_stats: [SyscallStats; MAX_NUM_SYSCALLS],
     /// When did we start tracking ebpf events
     begin: Instant,
     /// Whether to print all syscalls found
@@ -31,12 +30,20 @@ impl Default for ShellSubscriber {
     }
 }
 
+#[derive(Debug, Copy, Clone, Default)]
+struct SyscallStats {
+    /// Number of times this syscall has been called
+    number_of_calls: u32,
+    /// Total wall clock time spent by this syscall (microseconds). It counts both running and
+    /// idle time.
+    total_wall_clock_us: f64,
+}
+
 impl ShellSubscriber {
     pub fn new(print_all_syscalls: bool) -> ShellSubscriber {
         ShellSubscriber {
             thr_to_last_sys_enter: HashMap::new(),
-            total_syscalls_time: 0f64,
-            total_syscalls_count: 0,
+            syscall_stats: [Default::default(); MAX_NUM_SYSCALLS],
             begin: Instant::now(),
             print_all_syscalls,
         }
@@ -46,14 +53,22 @@ impl ShellSubscriber {
 impl ShellSubscriber {
     fn show_summary(&self) {
         let elapsed_time = self.begin.elapsed().as_micros();
+
+        let mut total_syscalls_time = 0f64;
+        let mut total_syscalls_count = 0u32;
+        for stat in self.syscall_stats.iter() {
+            total_syscalls_time += stat.total_wall_clock_us;
+            total_syscalls_count += stat.number_of_calls;
+        }
+
         let percentage_syscalls = if elapsed_time > 0 {
-            self.total_syscalls_time / (elapsed_time as f64) * 100f64
+            total_syscalls_time / (elapsed_time as f64) * 100f64
         } else {
             0f64
         };
 
-        println!("Total syscalls made: {}", self.total_syscalls_count);
-        println!("Spent time on syscalls: {:.2} us", self.total_syscalls_time);
+        println!("Total syscalls made: {}", total_syscalls_count);
+        println!("Spent time on syscalls: {:.2} us", total_syscalls_time);
         println!("Total analysis time: {elapsed_time} us");
         println!(
             "{:.2}% of the time was spent on syscalls",
@@ -83,23 +98,25 @@ impl EventSubscriber for ShellSubscriber {
             }
             syscall_state_tag::AT_EXIT => {
                 trace!("sys_exit: pid {pid}, tid {tid}");
-                self.total_syscalls_count += 1;
 
                 match self.thr_to_last_sys_enter.remove(&tid) {
                     Some(last_data) => match last_data.state.syscall_id() {
                         Some(syscall_id) => {
-                            let syscall_name = SyscallID::try_from(syscall_id)
-                                .map(|id| id.as_str())
-                                .unwrap_or("???");
+                            self.syscall_stats[syscall_id as usize].number_of_calls += 1;
+
                             let time_ns = timestamp.saturating_sub(last_data.timestamp);
                             let time_us = time_ns as f64 / 1000f64;
+                            self.syscall_stats[syscall_id as usize].total_wall_clock_us += time_us;
 
                             if self.print_all_syscalls {
+                                let syscall_name = SyscallID::try_from(syscall_id)
+                                    .map(|id| id.as_str())
+                                    .unwrap_or("???");
+
                                 let to_print =
                                     format!("({pid}/{tid}) {syscall_name} (took {time_us:.2} us)");
                                 println!("{}", to_print.dimmed());
                             }
-                            self.total_syscalls_time += time_us;
                         }
                         None => warn!("Unexpected non-AT_ENTER stored for tid {tid}"),
                     },

@@ -429,7 +429,7 @@ pub enum SyscallID {
 }
 
 /// Maximum number of syscalls
-const MAX_NUM_SYSCALLS: usize = 600;
+pub const MAX_NUM_SYSCALLS: usize = 600;
 
 /// Table for mapping a syscall to its name
 const SYSCALL_ID_TO_NAME_TABLE: [&str; MAX_NUM_SYSCALLS] = build_syscall_id_to_name_table();
