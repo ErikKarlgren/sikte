@@ -61,18 +61,25 @@ impl ShellSubscriber {
             total_syscalls_count += stat.number_of_calls;
         }
 
-        let percentage_syscalls = if elapsed_time > 0 {
+        let syscalls_time_percentage = if elapsed_time > 0 {
             total_syscalls_time / (elapsed_time as f64) * 100f64
         } else {
             0f64
         };
 
-        println!("Total syscalls made: {}", total_syscalls_count);
-        println!("Spent time on syscalls: {:.2} us", total_syscalls_time);
-        println!("Total analysis time: {elapsed_time} us");
         println!(
-            "{:.2}% of the time was spent on syscalls",
-            percentage_syscalls
+            r#"
+{}
+- Total syscalls made: {}
+- Spent time on syscalls: {}
+- Total analysis time: {}
+- {} of the time was spent on syscalls
+            "#,
+            "Summary".bright_yellow().bold(),
+            total_syscalls_count.to_string().blue(),
+            format!("{:.2} us", total_syscalls_time).blue(),
+            format!("{:.2} us", elapsed_time).blue(),
+            format!("{:.2}%", syscalls_time_percentage).blue(),
         );
     }
 }
