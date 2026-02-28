@@ -115,16 +115,19 @@ async fn trace_child_process_read_syscall() {
                 }
             }
 
-            let read_syscall_found = syscalls.iter().any(|sc| {
-                sc.state
-                    .syscall_id()
-                    .is_some_and(|id| id == SyscallID::read as i64)
-            });
+            assert!(!syscalls.is_empty(), "Error: No syscalls were detected");
 
-            assert!(
-                read_syscall_found,
-                "No read syscall was found for the traced process"
-            );
+            let expected_syscalls = [SyscallID::openat, SyscallID::read];
+            for expected_id in expected_syscalls {
+                assert!(
+                    syscalls.iter().any(|sc| {
+                        sc.state
+                            .syscall_id()
+                            .is_some_and(|id| id == expected_id as i64)
+                    }),
+                    "No read syscall was found for the traced process"
+                );
+            }
         }
         Ok(ForkResult::Child) => {
             // CHILD PROCESS
