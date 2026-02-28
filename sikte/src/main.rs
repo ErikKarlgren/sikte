@@ -32,11 +32,16 @@ async fn main() -> anyhow::Result<()> {
     let interrupted = Arc::new(AtomicBool::new(false));
 
     let mut event_bus = EventBus::new();
-    event_bus.spawn_subscription(ShellSubscriber::new());
 
     let child_process = match args.command {
-        Commands::Trace(TraceArgs { target }) => {
+        Commands::Trace(TraceArgs {
+            target,
+            print_syscalls,
+        }) => {
+            event_bus.spawn_subscription(ShellSubscriber::new(print_syscalls));
+
             let sys_enter = ebpf.attach_sys_enter_program()?;
+
             let sys_exit = ebpf.attach_sys_exit_program()?;
             let requirements = syscalls::Requirements::new(sys_enter, sys_exit);
 

@@ -6,6 +6,7 @@ use log::debug;
 #[command(name = "sikte")]
 #[command(about = "A tracing tool for syscalls")]
 pub struct Cli {
+    /// Subcommands available for sikte
     #[command(subcommand)]
     pub command: Commands,
 }
@@ -27,6 +28,10 @@ pub enum Commands {
 
 #[derive(Debug, Args)]
 pub struct TraceArgs {
+    /// Print all syscalls
+    #[arg(long, short)]
+    pub print_syscalls: bool,
+    /// Target arguments
     #[command(flatten)]
     pub target: TargetArgs,
 }

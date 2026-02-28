@@ -21,21 +21,24 @@ pub struct ShellSubscriber {
     total_syscalls_count: usize,
     /// When did we start tracking ebpf events
     begin: Instant,
+    /// Whether to print all syscalls found
+    print_all_syscalls: bool,
 }
 
 impl Default for ShellSubscriber {
     fn default() -> Self {
-        Self::new()
+        Self::new(false)
     }
 }
 
 impl ShellSubscriber {
-    pub fn new() -> ShellSubscriber {
+    pub fn new(print_all_syscalls: bool) -> ShellSubscriber {
         ShellSubscriber {
             thr_to_last_sys_enter: HashMap::new(),
             total_syscalls_time: 0f64,
             total_syscalls_count: 0,
             begin: Instant::now(),
+            print_all_syscalls,
         }
     }
 }
@@ -91,16 +94,20 @@ impl EventSubscriber for ShellSubscriber {
                             let time_ns = timestamp.saturating_sub(last_data.timestamp);
                             let time_us = time_ns as f64 / 1000f64;
 
-                            let to_print =
-                                format!("({pid}/{tid}) {syscall_name} (took {time_us:.2} us)");
-                            println!("{}", to_print.dimmed());
+                            if self.print_all_syscalls {
+                                let to_print =
+                                    format!("({pid}/{tid}) {syscall_name} (took {time_us:.2} us)");
+                                println!("{}", to_print.dimmed());
+                            }
                             self.total_syscalls_time += time_us;
                         }
                         None => warn!("Unexpected non-AT_ENTER stored for tid {tid}"),
                     },
                     None => {
-                        let to_print = format!("({pid}/{tid}) ??? (took ??? us)");
-                        println!("{}", to_print.dimmed());
+                        if self.print_all_syscalls {
+                            let to_print = format!("({pid}/{tid}) ??? (took ??? us)");
+                            println!("{}", to_print.dimmed());
+                        }
                     }
                 }
             }

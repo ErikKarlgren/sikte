@@ -94,7 +94,7 @@ impl EventPublisher for SyscallPublisher {
         // Poll ring buffer in a blocking task
         // The callback registered in new() will send events
         let rb = &mut self.ring_buffer;
-        let result = tokio::task::block_in_place(|| rb.poll(Duration::from_millis(100)));
+        let result = tokio::task::block_in_place(|| rb.poll(Duration::from_millis(1000)));
 
         match result {
             Ok(()) => Ok(0), // Event count tracked in callback
