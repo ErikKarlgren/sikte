@@ -111,7 +111,7 @@ async fn add_pids_to_allowlist(
             let program = &command_args[0];
             let args = &command_args[1..];
 
-            info!("Running program: {command_args:?}");
+            debug!("Running program: {command_args:?}");
             let child = Command::new(program).args(args).spawn()?;
             let pid = child.id().expect("program shouldn't have stopped yet");
             pid_allow_list.insert(pid as pid_t)?;
