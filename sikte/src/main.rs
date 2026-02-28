@@ -5,9 +5,10 @@ use std::sync::{
 };
 
 use anyhow::anyhow;
+use colored::Colorize;
 use itertools::Itertools;
 use libc::pid_t;
-use log::info;
+use log::{debug, info};
 use sikte::{
     cli::args::{Cli, Commands, Target, TargetArgs, TraceArgs},
     ebpf::{
@@ -58,17 +59,17 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // Wait for either Ctrl-C or child process completion
-    println!("Waiting for Ctrl-C...");
+    println!("{}", "Waiting for Ctrl-C...".blue());
 
     if let Some(mut child) = child_process {
         tokio::select! {
             _ = signal::ctrl_c() => {
-                println!("Received Ctrl-C, exiting...");
+                println!("{}", "Received Ctrl-C, exiting...".blue());
             }
             result = child.wait() => {
                 match result {
-                    Ok(status) => println!("Traced process exited with status: {status}"),
-                    Err(e) => eprintln!("Error waiting for child process: {e}"),
+                    Ok(status) => println!("{}", format!("Traced process exited with status: {status}").blue()),
+                    Err(e) => eprintln!("{}", format!("Error waiting for child process: {e}").red()),
                 }
             }
         }
