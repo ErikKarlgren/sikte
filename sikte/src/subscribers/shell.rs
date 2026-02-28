@@ -167,7 +167,7 @@ impl ShellSubscriber {
 - Total analysis time: {}
 - {} of the time was spent on syscalls
             "#,
-            "Summary".bright_yellow().bold(),
+            "📄 Summary".bright_yellow().bold(),
             total_syscalls_count.to_string().blue(),
             format!("{:.2} us", total_syscalls_time).blue(),
             format!("{:.2} us", elapsed_time).blue(),
@@ -181,11 +181,11 @@ impl ShellSubscriber {
 {}
 {}
             "#,
-            format!("Top {max_syscalls} most times used syscalls")
+            format!("1️⃣ Top {max_syscalls} most frequent syscalls")
                 .bright_yellow()
                 .bold(),
             syscall_count_stats,
-            format!("Top {max_syscalls} most time-consuming syscalls")
+            format!("⏳ Top {max_syscalls} most time-consuming syscalls")
                 .bright_yellow()
                 .bold(),
             syscall_time_stats,
