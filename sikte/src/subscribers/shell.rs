@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-use std::{collections::HashMap, time::Instant};
+use std::{cmp::Ordering, collections::HashMap, time::Instant};
 
 use colored::Colorize;
 use itertools::Itertools;
@@ -70,6 +70,7 @@ impl ShellSubscriber {
 
         const N: usize = 5;
         let syscall_count_stats = self.syscall_count_stats_as_str(N);
+        let syscall_time_stats = self.syscall_time_stats_as_str(N);
 
         self.print_summary(
             elapsed_time,
@@ -78,6 +79,7 @@ impl ShellSubscriber {
             syscalls_time_percentage,
             N,
             &syscall_count_stats,
+            &syscall_time_stats,
         );
     }
 
@@ -109,6 +111,44 @@ impl ShellSubscriber {
         most_called
     }
 
+    fn syscall_time_stats_as_str(&self, max_syscalls: usize) -> String {
+        let mut most_time: [(i64, f64); MAX_NUM_SYSCALLS] = self
+            .syscall_stats
+            .iter()
+            .enumerate()
+            .map(|(id, stat)| (id as i64, stat.total_wall_clock_us))
+            .collect_array()
+            .unwrap();
+        most_time.sort_by(|(_, time_a), (_, time_b)| {
+            time_a.partial_cmp(time_b).unwrap_or_else(|| {
+                if time_a.is_nan() && time_b.is_nan() {
+                    Ordering::Equal
+                } else if time_b.is_nan() {
+                    Ordering::Less
+                } else {
+                    Ordering::Greater
+                }
+            })
+        });
+
+        let most_called: String = most_time
+            .into_iter()
+            .rev()
+            .take_while(|(_, time)| *time > 0f64)
+            .take(max_syscalls)
+            .map(|(id, time)| {
+                format!(
+                    "- Total time for {} is {}\n",
+                    SyscallID::try_from(id)
+                        .map_or("???", |id| id.as_str())
+                        .blue(),
+                    format!("{:.2} us", time).to_string().blue()
+                )
+            })
+            .collect::<String>();
+        most_called
+    }
+
     fn print_summary(
         &self,
         elapsed_time: u128,
@@ -117,6 +157,7 @@ impl ShellSubscriber {
         syscalls_time_percentage: f64,
         max_syscalls: usize,
         syscall_count_stats: &str,
+        syscall_time_stats: &str,
     ) {
         println!(
             r#"
@@ -136,11 +177,18 @@ impl ShellSubscriber {
             r#"
 {}
 {}
+
+{}
+{}
             "#,
             format!("Top {max_syscalls} most times used syscalls")
                 .bright_yellow()
                 .bold(),
-            syscall_count_stats
+            syscall_count_stats,
+            format!("Top {max_syscalls} most time-consuming syscalls")
+                .bright_yellow()
+                .bold(),
+            syscall_time_stats,
         );
     }
 }
