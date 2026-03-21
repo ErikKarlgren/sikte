@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-use std::{cmp::Ordering, collections::HashMap, time::Instant};
+use std::{cmp::Ordering, collections::HashMap, fmt::Write, time::Instant};
 
 use colored::Colorize;
 use itertools::Itertools;
@@ -136,24 +136,23 @@ impl ShellSubscriber {
         let total_time_per_syscall = self.total_time_per_syscall();
         let total_time: f64 = total_time_per_syscall.iter().map(|(_, t)| t).sum();
 
-        output.push_str(
-            &total_time_per_syscall
-                .into_iter()
-                .rev()
-                .take_while(|(_, time)| *time > 0f64)
-                .take(max_syscalls)
-                .map(|(id, time)| {
-                    format!(
-                        "{:<SYSCALL_COLUMN_WIDTH$} {:<TIME_COLUMN_WIDTH$.2} {:.2}\n",
-                        SyscallID::try_from(id)
-                            .map_or("???", |id| id.as_str())
-                            .blue(),
-                        time,
-                        time / total_time * 100.0,
-                    )
-                })
-                .collect::<String>(),
-        );
+        total_time_per_syscall
+            .into_iter()
+            .rev()
+            .take_while(|(_, time)| *time > 0f64)
+            .take(max_syscalls)
+            .for_each(|(id, time)| {
+                writeln!(
+                    &mut output,
+                    "{:<SYSCALL_COLUMN_WIDTH$} {:<TIME_COLUMN_WIDTH$.2} {:.2}",
+                    SyscallID::try_from(id)
+                        .map_or("???", |id| id.as_str())
+                        .blue(),
+                    time,
+                    time / total_time * 100.0,
+                )
+                .unwrap()
+            });
         output
     }
 
