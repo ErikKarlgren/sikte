@@ -9,7 +9,7 @@ use log::{trace, warn};
 use super::EventSubscriber;
 use crate::{
     common::generated_types::{SyscallData, SyscallStateExt, syscall_state_tag},
-    publishers::syscalls::{MAX_NUM_SYSCALLS, SyscallID},
+    publishers::syscalls::{MAX_NUM_SYSCALLS, SyscallID, build_syscall_id_to_name_table},
 };
 
 /// Width used for padding the syscall column inside ShellSubscriber
@@ -236,6 +236,8 @@ impl EventSubscriber for ShellSubscriber {
             pid: tid,
         } = *syscall_data;
 
+        let syscall_name_length = get_max_syscall_name_length();
+
         match state.tag {
             syscall_state_tag::AT_ENTER => {
                 trace!("sys_enter: pid {pid}, tid {tid}");
@@ -258,8 +260,9 @@ impl EventSubscriber for ShellSubscriber {
                                     .map(|id| id.as_str())
                                     .unwrap_or("???");
 
-                                let to_print =
-                                    format!("({pid}/{tid}) {syscall_name} (took {time_us:.2} us)");
+                                let to_print = format!(
+                                    "({pid}/{tid}) {syscall_name:<syscall_name_length$} {time_us:.2} us"
+                                );
                                 println!("{}", to_print.dimmed());
                             }
                         }
@@ -285,4 +288,12 @@ impl Drop for ShellSubscriber {
     fn drop(&mut self) {
         self.show_summary();
     }
+}
+
+fn get_max_syscall_name_length() -> usize {
+    build_syscall_id_to_name_table()
+        .iter()
+        .map(|s| s.len())
+        .max()
+        .unwrap_or(0)
 }

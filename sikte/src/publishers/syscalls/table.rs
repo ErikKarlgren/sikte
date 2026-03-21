@@ -457,7 +457,7 @@ impl TryFrom<i64> for SyscallID {
 }
 
 #[cfg(target_arch = "x86_64")]
-const fn build_syscall_id_to_name_table() -> [&'static str; MAX_NUM_SYSCALLS] {
+pub const fn build_syscall_id_to_name_table() -> [&'static str; MAX_NUM_SYSCALLS] {
     // Data extracted from: https://github.com/torvalds/linux/blob/v6.16-rc1/arch/x86/entry/syscalls/syscall_64.tbl
     let mut t: [&str; MAX_NUM_SYSCALLS] = [""; MAX_NUM_SYSCALLS];
 
