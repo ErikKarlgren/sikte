@@ -12,6 +12,9 @@ use crate::{
     publishers::syscalls::{MAX_NUM_SYSCALLS, SyscallID},
 };
 
+/// Width used for padding the syscall column inside ShellSubscriber
+const SYSCALL_COLUMN_WIDTH: usize = 20;
+
 /// Event Subscriber that writes to stdout
 #[derive(Debug)]
 pub struct ShellSubscriber {
@@ -68,7 +71,7 @@ impl ShellSubscriber {
             0f64
         };
 
-        const N: usize = 5;
+        const N: usize = 10;
         let syscall_count_stats = self.syscall_count_stats_as_str(N);
         let syscall_time_stats = self.syscall_time_stats_as_str(N);
 
@@ -84,6 +87,33 @@ impl ShellSubscriber {
     }
 
     fn syscall_count_stats_as_str(&self, max_syscalls: usize) -> String {
+        let mut output = format!(
+            "{:<SYSCALL_COLUMN_WIDTH$} {}\n",
+            "SYSCALLS".bold(),
+            "COUNT".bold()
+        );
+        output.push_str(
+            &self
+                .frequency_per_syscall()
+                .into_iter()
+                .rev()
+                .take_while(|(_, num_calls)| *num_calls > 0)
+                .take(max_syscalls)
+                .map(|(id, num_calls)| {
+                    format!(
+                        "{:<SYSCALL_COLUMN_WIDTH$} {}\n",
+                        SyscallID::try_from(id)
+                            .map_or("???", |id| id.as_str())
+                            .blue(),
+                        num_calls
+                    )
+                })
+                .collect::<String>(),
+        );
+        output
+    }
+
+    fn frequency_per_syscall(&self) -> [(i64, u32); MAX_NUM_SYSCALLS] {
         let mut most_called: [(i64, u32); MAX_NUM_SYSCALLS] = self
             .syscall_stats
             .iter()
@@ -92,26 +122,42 @@ impl ShellSubscriber {
             .collect_array()
             .unwrap();
         most_called.sort_by_key(|(_, num_calls)| *num_calls);
-
-        let most_called: String = most_called
-            .into_iter()
-            .rev()
-            .take_while(|(_, num_calls)| *num_calls > 0)
-            .take(max_syscalls)
-            .map(|(id, num_calls)| {
-                format!(
-                    "- {} was called {} times\n",
-                    SyscallID::try_from(id)
-                        .map_or("???", |id| id.as_str())
-                        .blue(),
-                    num_calls.to_string().blue()
-                )
-            })
-            .collect::<String>();
         most_called
     }
 
     fn syscall_time_stats_as_str(&self, max_syscalls: usize) -> String {
+        const TIME_COLUMN_WIDTH: usize = 15;
+        let mut output = format!(
+            "{:<SYSCALL_COLUMN_WIDTH$} {:<TIME_COLUMN_WIDTH$} {}\n",
+            "SYSCALLS".bold(),
+            "TIME (us)".bold(),
+            "% OF TOTAL SYSCALL TIME".bold(),
+        );
+        let total_time_per_syscall = self.total_time_per_syscall();
+        let total_time: f64 = total_time_per_syscall.iter().map(|(_, t)| t).sum();
+
+        output.push_str(
+            &total_time_per_syscall
+                .into_iter()
+                .rev()
+                .take_while(|(_, time)| *time > 0f64)
+                .take(max_syscalls)
+                .map(|(id, time)| {
+                    format!(
+                        "{:<SYSCALL_COLUMN_WIDTH$} {:<TIME_COLUMN_WIDTH$.2} {:.2}\n",
+                        SyscallID::try_from(id)
+                            .map_or("???", |id| id.as_str())
+                            .blue(),
+                        time,
+                        time / total_time * 100.0,
+                    )
+                })
+                .collect::<String>(),
+        );
+        output
+    }
+
+    fn total_time_per_syscall(&self) -> [(i64, f64); MAX_NUM_SYSCALLS] {
         let mut most_time: [(i64, f64); MAX_NUM_SYSCALLS] = self
             .syscall_stats
             .iter()
@@ -130,23 +176,7 @@ impl ShellSubscriber {
                 }
             })
         });
-
-        let most_called: String = most_time
-            .into_iter()
-            .rev()
-            .take_while(|(_, time)| *time > 0f64)
-            .take(max_syscalls)
-            .map(|(id, time)| {
-                format!(
-                    "- Total time for {} is {}\n",
-                    SyscallID::try_from(id)
-                        .map_or("???", |id| id.as_str())
-                        .blue(),
-                    format!("{:.2} us", time).to_string().blue()
-                )
-            })
-            .collect::<String>();
-        most_called
+        most_time
     }
 
     fn print_summary(
