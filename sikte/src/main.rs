@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
+use std::{
+    process::exit,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
 };
 
 use anyhow::anyhow;
@@ -10,9 +13,11 @@ use itertools::Itertools;
 use libc::pid_t;
 use log::{debug, info};
 use sikte::{
+    cap_checker::has_bpf_capability,
     cli::args::{Cli, Commands, Target, TargetArgs, TraceArgs},
     ebpf::{
         SikteEbpf,
+        error::EbpfError,
         map_types::{PidAllowList, SyscallRingBuf},
     },
     events::EventBus,
@@ -26,9 +31,36 @@ use tokio::{process::Command, signal};
 async fn main() -> anyhow::Result<()> {
     let args = Cli::parse_args();
     env_logger::init();
+
+    if !has_bpf_capability()? {
+        eprintln!(
+            "{}",
+            "Not enough permissions to start tracing: either run as root or as a user with the capability CAB_BPF".red()
+        );
+        return Ok(());
+    }
+
     bump_memlock_rlimit();
 
-    let mut ebpf = SikteEbpf::load()?;
+    let mut ebpf = match SikteEbpf::load() {
+        Ok(ebpf) => ebpf,
+        Err(err) => {
+            match err {
+                EbpfError::Load { program, source } => {
+                    eprintln!("Could not load eBPF program {program}: {source}")
+                }
+                EbpfError::Attach {
+                    program,
+                    attach_target,
+                    source,
+                } => eprintln!(
+                    "Could not attach eBPF program {program} to {attach_target}: {source}"
+                ),
+                EbpfError::Libbpf(error) => eprintln!("Error: {error}"),
+            };
+            exit(1);
+        }
+    };
 
     let interrupted = Arc::new(AtomicBool::new(false));
 
