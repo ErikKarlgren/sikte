@@ -73,7 +73,7 @@ impl ShellSubscriber {
 
         const N: usize = 10;
         let syscall_count_stats = self.syscall_count_stats_as_str(N);
-        let syscall_time_stats = self.syscall_time_stats_as_str(N);
+        let syscall_time_stats = self.syscall_time_stats_as_str(N, elapsed_time);
 
         self.print_summary(
             elapsed_time,
@@ -125,16 +125,18 @@ impl ShellSubscriber {
         most_called
     }
 
-    fn syscall_time_stats_as_str(&self, max_syscalls: usize) -> String {
-        const TIME_COLUMN_WIDTH: usize = 15;
+    fn syscall_time_stats_as_str(&self, max_syscalls: usize, elapsed_time: u128) -> String {
+        const TIME_COLUMN_WIDTH_SHORT: usize = 16;
+        const TIME_COLUMN_WIDTH: usize = 28;
         let mut output = format!(
-            "{:<SYSCALL_COLUMN_WIDTH$} {:<TIME_COLUMN_WIDTH$} {}\n",
+            "{:<SYSCALL_COLUMN_WIDTH$} {:<TIME_COLUMN_WIDTH_SHORT$} {:<TIME_COLUMN_WIDTH$} {}\n",
             "SYSCALLS".bold(),
             "TIME (us)".bold(),
             "% OF TOTAL SYSCALL TIME".bold(),
+            "% OF TOTAL ELAPSED TIME".bold(),
         );
         let total_time_per_syscall = self.total_time_per_syscall();
-        let total_time: f64 = total_time_per_syscall.iter().map(|(_, t)| t).sum();
+        let total_sys_time: f64 = total_time_per_syscall.iter().map(|(_, t)| t).sum();
 
         total_time_per_syscall
             .into_iter()
@@ -144,12 +146,13 @@ impl ShellSubscriber {
             .for_each(|(id, time)| {
                 writeln!(
                     &mut output,
-                    "{:<SYSCALL_COLUMN_WIDTH$} {:<TIME_COLUMN_WIDTH$.2} {:.2}",
+                    "{:<SYSCALL_COLUMN_WIDTH$} {:<TIME_COLUMN_WIDTH_SHORT$.2} {:<TIME_COLUMN_WIDTH$.2} {:.2}",
                     SyscallID::try_from(id)
                         .map_or("???", |id| id.as_str())
                         .blue(),
                     time,
-                    time / total_time * 100.0,
+                    time / total_sys_time * 100.0,
+                    time / (elapsed_time as f64) * 100.0,
                 )
                 .unwrap()
             });
