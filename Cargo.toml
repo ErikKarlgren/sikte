@@ -36,5 +36,6 @@ tokio = { version = "1.40.0", default-features = false }
 which = { version = "6.0.0", default-features = false }
 
 [profile.release]
-debug = 2
+strip = "debuginfo"
+lto = "thin"
 codegen-units = 1

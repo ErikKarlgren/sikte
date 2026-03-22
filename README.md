@@ -46,12 +46,14 @@ cargo run --release --config 'target."cfg(all())".runner="sudo -E"' -- trace ls
 ```
 
 ## Roadmap
-
+For now, sikte will focus on syscalls so it can provide rich, easy-to-understand information and metrics.
+After that, the focus will shift to providing deeper CPU-usage insights beyond just %CPU and idle time.
 - [x] Trace syscalls
    - [ ] Trace syscalls for child processes
+   - [ ] Store tracing data for each run as files with a versioned schema
+   - [ ] Show rich report info about syscalls (TUI)
 - [ ] Trace hardware counters overtime (cache misses, ...)
 - [ ] Calculate correlations between them
-- [ ] Store tracing data for each run as files with a versioned schema
 - [ ] Create a GUI on top of stored traces that can be run in any OS that has Rust support (Windows, Linux, ...)
 - [ ] Trace stacktraces overtime and create flamegraphs
 
