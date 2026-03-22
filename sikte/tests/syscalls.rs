@@ -128,7 +128,6 @@ async fn trace_child_process_read_syscall() {
                     expected_id as i64
                 );
             }
-            }
         }
         Ok(ForkResult::Child) => {
             // CHILD PROCESS
