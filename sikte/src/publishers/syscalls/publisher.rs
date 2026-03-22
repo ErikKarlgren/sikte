@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use log::warn;
+use log::{debug, warn};
 use tokio::sync::broadcast::Sender;
 
 use crate::{
@@ -60,7 +60,7 @@ impl SyscallPublisher {
             match plain::copy_from_bytes(&mut syscall_data, data) {
                 Ok(()) => {
                     if let Err(e) = tx.send(Event::Syscall(syscall_data)) {
-                        warn!("Dropping syscall event (send failed): {e}");
+                        debug!("Cannot send syscall event to queue: {e}");
                     }
                 }
                 Err(e) => {
