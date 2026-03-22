@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-use std::{cmp::Ordering, collections::HashMap, fmt::Write, time::Instant};
+use std::{cmp::Ordering, collections::HashMap, fmt::Write, sync::LazyLock, time::Instant};
 
 use colored::Colorize;
 use itertools::Itertools;
@@ -237,7 +237,8 @@ impl EventSubscriber for ShellSubscriber {
             pid: tid,
         } = *syscall_data;
 
-        let syscall_name_length = get_max_syscall_name_length();
+        static SYSCALL_NAME_LENGTH: LazyLock<usize> =
+            std::sync::LazyLock::new(get_max_syscall_name_length);
 
         match state.tag {
             syscall_state_tag::AT_ENTER => {
@@ -262,7 +263,7 @@ impl EventSubscriber for ShellSubscriber {
                                     .unwrap_or("???");
 
                                 let to_print = format!(
-                                    "({pid}/{tid}) {syscall_name:<syscall_name_length$} {time_us:.2} us"
+                                    "({pid}/{tid}) {syscall_name:<SYSCALL_NAME_LENGTH$} {time_us:.2} us"
                                 );
                                 println!("{}", to_print.dimmed());
                             }
