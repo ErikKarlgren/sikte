@@ -20,25 +20,28 @@ pub fn has_bpf_capability() -> io::Result<bool> {
     let caps = extract_capabilities(&buf)?;
 
     // Defined in kernel source as 39 (include/uapi/linux/capability.h)
-    const CAP_BPF_BIT: i32 = 39;
+    const CAP_BPF_BIT: u32 = 39;
     Ok(((caps >> CAP_BPF_BIT) & 1) != 0)
 }
 
 fn extract_capabilities(buf: &str) -> io::Result<u64> {
-    match buf.lines().find(|l| l.starts_with("CapEff:")) {
-        None => Err(io::Error::other("Line with \"CapEff:\" was not found")),
-        Some(line) => match line.split_ascii_whitespace().nth(1) {
-            None => Err(io::Error::other(
-                "Line with \"CapEff:\" doesn't have a whitespace to split the line into 2 parts",
-            )),
-            Some(caps_hex) => match u64::from_str_radix(caps_hex.trim(), 16) {
-                Ok(n) => Ok(n),
-                Err(e) => Err(io::Error::other(format!(
-                    "Line with \"CapEff:\" doesn't have a valid value: {e}"
-                ))),
-            },
-        },
-    }
+    let line = buf
+        .lines()
+        .find(|l| l.starts_with("CapEff:"))
+        .ok_or(io::Error::other("Line with \"CapEff:\" was not found"))?;
+
+    let caps_hex = line
+        .split_ascii_whitespace()
+        .nth(1)
+        .ok_or(io::Error::other(
+            "Line with \"CapEff:\" doesn't have a whitespace to split the line into 2 parts",
+        ))?;
+
+    u64::from_str_radix(caps_hex.trim(), 16).map_err(|e| {
+        io::Error::other(format!(
+            "Line with \"CapEff:\" doesn't have a valid value: {e}"
+        ))
+    })
 }
 
 #[cfg(test)]
