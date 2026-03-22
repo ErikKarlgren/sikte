@@ -4,19 +4,11 @@ use std::{
     io::{self, Read},
 };
 
-use libc::geteuid;
-use log::warn;
-
 const SELF_STATUS_PATH: &str = "/proc/self/status";
 
 /// Checks if the current process has the required capabilities for loading BPF programs. It will
 /// read from {SELF_STATUS_PATH}
 pub fn has_bpf_capability() -> io::Result<bool> {
-    if unsafe { geteuid() } == 0 {
-        warn!("Running as root. Consider running as a user only with the CAP_BPF capability");
-        return Ok(true);
-    }
-
     let mut buf = String::new();
     if fs::File::open(SELF_STATUS_PATH)?.read_to_string(&mut buf)? == 0 {
         return Err(io::Error::other(format!(
