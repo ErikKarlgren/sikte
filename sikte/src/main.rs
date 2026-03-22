@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 use std::{
+    io::{self, IsTerminal},
     process::exit,
     sync::{
         Arc,
@@ -90,24 +91,27 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    // Wait for either Ctrl-C or child process completion
-    println!("{}", "Waiting for Ctrl-C...".blue());
+    if io::stdin().is_terminal() {
+        // Wait for either Ctrl-C or child process completion
+        println!("{}", "Press Ctrl-C to stop tracing early".green().bold());
+    }
 
+    let ctrl_c_received_msg = "Received Ctrl-C, stopping tracing early...".green().bold();
     if let Some(mut child) = child_process {
         tokio::select! {
             _ = signal::ctrl_c() => {
-                println!("{}", "Received Ctrl-C, exiting...".blue());
+                println!("{ctrl_c_received_msg}");
             }
             result = child.wait() => {
                 match result {
-                    Ok(status) => println!("{}", format!("Traced process exited with status: {status}").blue()),
-                    Err(e) => eprintln!("{}", format!("Error waiting for child process: {e}").red()),
+                    Ok(status) => println!("{}", format!("Traced process finished: {status}").blue()),
+                    Err(e) => eprintln!("{}", format!("Error while waiting for child process: {e}").red()),
                 }
             }
         }
     } else {
         signal::ctrl_c().await?;
-        println!("Received Ctrl-C, exiting...");
+        println!("{ctrl_c_received_msg}");
     }
 
     interrupted.store(true, Ordering::Release);
