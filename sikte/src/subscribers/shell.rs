@@ -52,9 +52,7 @@ impl ShellSubscriber {
             print_all_syscalls,
         }
     }
-}
 
-impl ShellSubscriber {
     fn show_summary(&self) {
         let elapsed_time = self.begin.elapsed().as_micros();
 
