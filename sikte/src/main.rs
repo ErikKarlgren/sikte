@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
     if !has_bpf_capability()? {
         eprintln!(
             "{}",
-            "Not enough permissions to start tracing: either run as root or as a user with the capability CAB_BPF".red()
+            "Not enough permissions to start tracing: either run as root or as a user with the capability CAP_BPF".red()
         );
         return Ok(());
     }
